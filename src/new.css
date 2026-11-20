@@ -548,3 +548,9 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
 .relic small { color: var(--dim); line-height: 1.3; }
 .relic kbd { position: absolute; top: 6px; right: 8px; font-size: 11px; }
 @media (pointer: coarse) { .relic kbd { display: none; } }
+
+/* Kingdom Map: a tint per act theme */
+.mapwrap.z-cave { background: linear-gradient(180deg, #2b2418 0%, #1b1710 100%); }
+.mapwrap.z-haunt { background: linear-gradient(180deg, #221b33 0%, #15111f 100%); }
+.mapwrap.z-volcano { background: linear-gradient(180deg, #3a1a14 0%, #1f0f0c 100%); }
+.mapwrap { border-radius: 12px; }

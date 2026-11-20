@@ -62,7 +62,7 @@ function rerender() {
 }
 
 // version shown small on the home / profile screens and in the pause menu; bump it with every release
-const GAME_VER = "1.9.1";
+const GAME_VER = "1.10.0";
 
 // ================= cards =================
 // type: atk (attack) | skl (skill) | pow (power: stays in play for the fight). r: 0 starter/weapon, 1 common, 2 uncommon, 3 rare.
@@ -1807,6 +1807,9 @@ const ZONES = [
   { id: "library", ic: "📚", t: ["ห้องสมุดต้องห้าม", "The Forbidden Library"], rule: ["เทิร์นแรกจั่ว +2 แต่ ⚡ −1", "Turn 1: draw +2 but −1 ⚡"], foes: ["voidw", "kraken", "tome", "inkwraith", "gargoyle"], bosses: ["archivist", "wyrm"] },
   { id: "abyss", ic: "🌌", t: ["ห้วงเหวลึก", "The Abyss"], rule: ["ศัตรูแกร่งขึ้น 10% · ทอง +25%", "Enemies 10% tougher · +25% gold"], foes: ["horror", "voidw", "leech", "troll", "gargoyle"], bosses: ["leviathan", "dragon"] },
 ];
+// the Kingdom Map: act 1 / 2 / 3 reuse three zones (their enemies, no standing rule, so the act difficulty stays as tuned)
+const MAP_ACTS = [{ zone: "cave", bosses: ["lich", "hive"] }, { zone: "haunt", bosses: ["vamp", "mirror"] }, { zone: "volcano", bosses: ["titan", "dragon"] }];
+const mapZone = () => ZONES.find(x => x.id === MAP_ACTS[Math.min(ACTS, run.act) - 1].zone);
 const zoneOf = floor => { const z = Math.floor(Math.max(0, floor - 1) / 10); return ZONES[z < ZONES.length ? z : 2 + (z - ZONES.length) % 3]; };
 const ENDLESS_MS = [10, 20, 30, 40, 50]; // milestone floors: a permanent reward the first time each one is cleared
 
@@ -1972,6 +1975,9 @@ function startCombat(kind) {
   } else if (run.mode === "endless") { // the zone decides who lives here
     const z = zoneOf(run.floor);
     ids = kind === "boss" ? [z.bosses[run.floor % 10 === 0 ? 1 : 0]] : kind === "elite" ? [rand(z.foes)] : run.floor > 2 && Math.random() < 0.45 ? [rand(z.foes), rand(z.foes)] : [rand(z.foes)];
+  } else if (run.mode === "map") { // each act has its own theme: its own enemies and a choice of two bosses
+    const m = MAP_ACTS[run.act - 1], z = ZONES.find(x => x.id === m.zone);
+    ids = kind === "boss" ? [rand(m.bosses)] : kind === "elite" ? [rand(z.foes)] : run.floor > 2 && Math.random() < 0.45 ? [rand(z.foes), rand(z.foes)] : [rand(z.foes)];
   } else if (kind === "boss") ids = [ACT_BOSS[run.act - 1]];
   else if (kind === "elite") ids = [rand(TIERS[act])];
   else ids = run.floor > 2 && Math.random() < 0.45 ? [rand(TIERS[act]), rand(TIERS[act])] : [rand(TIERS[act])];
@@ -2303,7 +2309,7 @@ function headHtml() {
   const md = modeOf(run.mode);
   const z = run.mode === "endless" && zoneOf(Math.max(1, run.floor));
   const where = run.mode === "story" ? EPISODE.chapters[run.ch].n : run.mode === "endless" ? `${z.ic} ${L("ชั้น ", "Floor ")}${run.floor}` + (run.combat && run.mods && run.mods.length ? " " + run.mods.map(modChip).join("") : "") + (run.relics && run.relics.length ? ` <span class="rlist">${relicIcons()}</span>` : "")
-    : run.mode === "rooms" || run.mode === "arena" ? `Act ${run.act} · ${L("ห้อง", "Room")} ${run.floor}/${ROOMS_PER_ACT * ACTS}` : `Act ${run.act} · ${L("ชั้น", "Floor")} ${run.floor}` + (run.relics && run.relics.length ? ` <span class="rlist">${relicIcons()}</span>` : "");
+    : run.mode === "rooms" || run.mode === "arena" ? `Act ${run.act} · ${L("ห้อง", "Room")} ${run.floor}/${ROOMS_PER_ACT * ACTS}` : `${run.mode === "map" ? mapZone().ic + " " : ""}Act ${run.act} · ${L("ชั้น", "Floor")} ${run.floor}` + (run.relics && run.relics.length ? ` <span class="rlist">${relicIcons()}</span>` : "");
   return `<span>${md.ic} <b>${where}</b></span><span>❤️ <b>${run.hp}/${run.maxHp}</b></span><span>💰 <b>${run.gold}</b></span>` +
     `<button class="ghost pot${run.potions ? "" : " no"}" data-a="potion" title="Potion">🧪 ${run.potions}</button><span class="sp"></span>` +
     `<button class="ghost" data-a="deck">🃏 ${run.deck.length}</button><button class="ghost" data-a="pause">⏸</button>`;
@@ -2330,8 +2336,9 @@ function mapHtml() {
     return `<div class="mnode ${cls}" style="left:${x(n.l)}%;top:${y(n.r)}px"${can.has(k) ? ` data-a="node|${k}"` : ""} title="${esc(tr(NODE[n.type].t))}">${NODE[n.type].ic}</div>`;
   }).join("");
   const legend = Object.entries(NODE).filter(([, n]) => !n.endless).map(([, n]) => `<span>${n.ic} ${tr(n.t)}</span>`).join("");
-  return `<div class="sub" style="margin:0 0 6px">${L("แตะช่องที่กระพริบเพื่อเดินต่อ", "Tap a glowing node to move on")}</div><div class="legend">${legend}</div>` +
-    `<div class="mapwrap" id="mapwrap" style="height:${total}px"><svg viewBox="0 0 100 ${total}" preserveAspectRatio="none">${lines}</svg>${nodes}</div>`;
+  const mz = mapZone(), zb = `<div class="zoneban">${mz.ic} <b>Act ${run.act} · ${tr(mz.t)}</b> <small>${L("ศัตรู:", "Enemies:")} ${mz.foes.map(f => FOES[f].e).join(" ")} · ${L("บอส:", "Boss:")} ${mz.id && MAP_ACTS[run.act - 1].bosses.map(f => FOES[f].e).join(" / ")}</small></div>`;
+  return zb + `<div class="sub" style="margin:6px 0">${L("แตะช่องที่กระพริบเพื่อเดินต่อ", "Tap a glowing node to move on")}</div><div class="legend">${legend}</div>` +
+    `<div class="mapwrap z-${mz.id}" id="mapwrap" style="height:${total}px"><svg viewBox="0 0 100 ${total}" preserveAspectRatio="none">${lines}</svg>${nodes}</div>`;
 }
 function scrollMap() {
   const body = $("rbody"), here = document.querySelector(".mnode.can") || document.querySelector(".mnode.here");
