@@ -62,7 +62,7 @@ function rerender() {
 }
 
 // version shown small on the home / profile screens and in the pause menu; bump it with every release
-const GAME_VER = "1.11.1";
+const GAME_VER = "1.12.0";
 
 // ================= cards =================
 // type: atk (attack) | skl (skill) | pow (power: stays in play for the fight). r: 0 starter/weapon, 1 common, 2 uncommon, 3 rare.
@@ -574,7 +574,8 @@ function statsOf(pr) {
   s.enChance = +(pr.capStats ? Math.min(0.6, SX.int * (S("int") - STAT_BASE)) : SX.int * (S("int") - STAT_BASE)).toFixed(3); // every full 100% is a guaranteed +1⚡
   s.killHeal += 0.005 * (S("fai") - STAT_BASE);
   s.regen = Math.floor((S("fai") - STAT_BASE) / SX.faiRegen);
-  s.hp *= 1 + SX.vit * (S("vit") - STAT_BASE);
+  if (pr.capStats) s.hp *= 1 + SX.vit * (S("vit") - STAT_BASE); // equal-stat PvP keeps the percentage version
+  else s.hp += SX.vitFlat * (S("vit") - STAT_BASE);              // everywhere else: a flat amount per point, so every point is felt
   s.dodge = +(pr.capStats ? Math.min(0.2, SX.agi * (S("agi") - STAT_BASE)) : SX.agi * (S("agi") - STAT_BASE)).toFixed(3); // no cap on the stat; in a fight dodge tops out at 90%
   // class card power: the best held weapon of that class (its scaling grades x requirement), otherwise a little from the class stat
   const weps = hands.filter(v => isWeaponId(v.id)), top = Math.max(...STATS.map(sd => S(sd.id)));
@@ -608,23 +609,23 @@ function statsOf(pr) {
 
 // ================= character level, stats and theme mastery (permanent) =================
 // what one point of each stat gives on top of weapon scaling (tuned so a focused stat is worth about the same in every class)
-const SX = { str: 0.005, vit: 0.01, int: 0.02, agi: 0.01, faiRegen: 6 };
+const SX = { str: 0.005, vit: 0.01, vitFlat: 3, int: 0.02, agi: 0.01, faiRegen: 6 };
 const STATS = [
   { id: "str", ic: "💪", n: "STR", d: ["ดาเมจทุกการ์ด +0.5% · อาวุธ Berserker", "All damage +0.5% · Berserker weapons"] },
   { id: "dex", ic: "🎯", n: "DEX", d: ["Crit +1% (ไม่จำกัด · ในไฟต์สูงสุด 90%) · อาวุธ Duelist", "Crit +1% (no cap · 90% in a fight) · Duelist weapons"] },
   { id: "int", ic: "🔮", n: "INT", d: ["โอกาส +1⚡ ต้นเทิร์น +2% (ไม่จำกัด · ครบ 100% = ได้ +1⚡ ทุกเทิร์น) · อาวุธ Sorcerer", "+2% chance of +1⚡ each turn (no cap · every 100% = a sure +1⚡) · Sorcerer weapons"] },
   { id: "fai", ic: "✨", n: "FAI", d: ["ชนะไฟต์ฟื้น HP +0.5% · ทุก 6 แต้ม ฟื้น 1 HP ต้นเทิร์น · อาวุธ Cleric", "+0.5% HP healed per win · every 6 points heal 1 HP each turn · Cleric weapons"] },
-  { id: "vit", ic: "❤️", n: "VIT", d: ["Max HP +1% · อาวุธ Guardian", "Max HP +1% · Guardian weapons"] },
+  { id: "vit", ic: "❤️", n: "VIT", d: ["Max HP +3 ต่อแต้ม · อาวุธ Guardian", "Max HP +3 per point · Guardian weapons"] },
   { id: "agi", ic: "🌬️", n: "AGI", d: ["หลบการโจมตี +1% (ไม่จำกัด · ในไฟต์สูงสุด 90%) · อาวุธ Ranger", "Dodge +1% (no cap · 90% in a fight) · Ranger weapons"] },
 ];
-const STAT_BASE = 5, STAT_STEP = 0.03, PTS_PER_LV = 4, LV_MAX = 60, REQ_FLOOR = 0.4;
+const STAT_BASE = 5, STAT_STEP = 0.03, PTS_PER_LV = 4, LV_MAX = Infinity, REQ_FLOOR = 0.4;
 const THEME_STAT = { berserker: "str", duelist: "dex", sorcerer: "int", cleric: "fai", guardian: "vit", ranger: "agi", gambler: "dex", martial: null };
 const GRADE = { S: 0.05, A: 0.04, B: 0.03, C: 0.02, D: 0.01 }; // power per stat point above 5
 // what a stat value gives (its own effect only)
 const statFx = (id, v) => {
   const x = v - STAT_BASE;
   return id === "str" ? L(`ดาเมจ +${+(SX.str * 100 * x).toFixed(1)}%`, `damage +${+(SX.str * 100 * x).toFixed(1)}%`) : id === "dex" ? `Crit +${x}%` : id === "int" ? `+1⚡ ${+(SX.int * 100 * x).toFixed(1)}%`
-    : id === "fai" ? L(`ชนะฟื้น ${+(0.5 * x).toFixed(1)}%`, `win heal ${+(0.5 * x).toFixed(1)}%`) + (Math.floor(x / SX.faiRegen) > 0 ? ` · 💚${Math.floor(x / SX.faiRegen)}/${L("เทิร์น", "turn")}` : "") : id === "vit" ? `HP +${+(SX.vit * 100 * x).toFixed(1)}%` : L(`หลบ ${+(SX.agi * 100 * x).toFixed(1)}%`, `dodge ${+(SX.agi * 100 * x).toFixed(1)}%`);
+    : id === "fai" ? L(`ชนะฟื้น ${+(0.5 * x).toFixed(1)}%`, `win heal ${+(0.5 * x).toFixed(1)}%`) + (Math.floor(x / SX.faiRegen) > 0 ? ` · 💚${Math.floor(x / SX.faiRegen)}/${L("เทิร์น", "turn")}` : "") : id === "vit" ? `HP +${SX.vitFlat * x}` : L(`หลบ ${+(SX.agi * 100 * x).toFixed(1)}%`, `dodge ${+(SX.agi * 100 * x).toFixed(1)}%`);
 };
 const charNeed = lv => Math.round(30 * Math.pow(lv, 1.5));
 const statOf = (pr, k) => (pr.stat && pr.stat[k]) || STAT_BASE;
@@ -875,7 +876,7 @@ function newStatHtml() {
   return `<div class="newstat"><div class="sub" style="margin:0 0 6px">📈 ${L("Stat เริ่มต้น", "Starting stats")} · ${THEMES[newCls].ic} ${tr(THEMES[newCls].n)}` +
     (k ? "" : ` · ${L("แต้มว่าง", "points left")} <b style="color:var(--gold)">${freeLeft()}</b> <small>(${L("เหลือไว้แจกทีหลังได้", "leftovers can be placed later")})</small>`) + `</div>` +
     `<div class="nslist">${STATS.map(box).join("")}</div>` +
-    `<div class="sub" style="margin:6px 0 0">❤️ HP ${Math.round((BASE_HP + (newCls === "cleric" ? 8 : 0)) * (1 + SX.vit * (val("vit") - STAT_BASE)))} · ${L("เลเวลอัปได้ 4 แต้มไว้แจกเองที่หน้าตัวละคร", "each level gives 4 points to place on the Character screen")}</div></div>`;
+    `<div class="sub" style="margin:6px 0 0">❤️ HP ${BASE_HP + (newCls === "cleric" ? 8 : 0) + SX.vitFlat * (val("vit") - STAT_BASE)} · ${L("เลเวลอัปได้ 4 แต้มไว้แจกเองที่หน้าตัวละคร", "each level gives 4 points to place on the Character screen")}</div></div>`;
 }
 // give and wear a class's starting gear and stats (once per profile)
 function giveStarter(pr, cls, free) {
