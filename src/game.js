@@ -62,7 +62,7 @@ function rerender() {
 }
 
 // version shown small on the home / profile screens and in the pause menu; bump it with every release
-const GAME_VER = "1.7.1";
+const GAME_VER = "1.8.0";
 
 // ================= cards =================
 // type: atk (attack) | skl (skill) | pow (power: stays in play for the fight). r: 0 starter/weapon, 1 common, 2 uncommon, 3 rare.
@@ -2722,7 +2722,7 @@ function renderInv() {
   const tabs = [["gear", "🎒", L("อุปกรณ์", "Equipment")], ["stat", "📈", "Status"], ["pass", "✨", "Passive"]];
   $("invHead").innerHTML += `<div class="tabs" id="invTabs" style="margin:8px 0 0">${tabs.map(([k, ic, n]) => `<button class="ghost${invTab === k ? " on" : ""}" data-invtab="${k}">${ic} ${n}${k === "stat" && pr.pts ? " ⭐" + pr.pts : ""}</button>`).join("")}</div>`;
   if (invTab === "gear") {
-    $("invBody").innerHTML = `<div class="invcols"><div class="invcol" id="invLeft">` + sec(t("invGear"), renderDoll(pr) + slotDetail(pr)) + `</div>` +
+    $("invBody").innerHTML = `<div class="invcols gearcols"><div class="invcol" id="invLeft">` + sec(t("invGear"), renderDoll(pr) + slotDetail(pr)) + `</div>` +
       `<div class="invcol" id="invRight">${gearChips(pr)}${renderAllItems(pr, "gear")}</div></div>`;
     if (right) $("invRight").scrollTop = right;
   } else if (invTab === "stat") {

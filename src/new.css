@@ -505,3 +505,17 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
 .sdet.empty { border-style: dashed; opacity: .85; }
 .sdet small { color: var(--dim); }
 .reqbad { color: var(--bad); }
+
+/* every item list (shop tabs, Character equipment / passives) is a grid of cards: icon left, name and stats in the middle, price or action on the right */
+#mshop .mright .shop, #inv .shop { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 8px; max-width: none; width: 100%; margin: 0 0 10px; }
+#mshop .mright .secgrid, #inv .secgrid { display: block; column-count: 1; }
+#mshop .mright .secgrid .sec, #inv .secgrid .sec { display: block; width: 100%; max-width: none; margin: 10px 0 0; }
+#mshop .mright .shop.two, #inv .shop.two { grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); }
+#mshop .shop .item, #inv .shop .item { min-width: 0; }
+#mshop .shop .item.rrow, #inv .shop .item.rrow { flex-wrap: wrap; }
+#mshop .shop .item.rrow .info, #inv .shop .item.rrow .info { flex: 1 1 180px; min-width: 0; }
+#mshop .shop .item .mergeBtn, #inv .shop .item .mergeBtn { white-space: normal; }
+#mshop .sec h3 { margin-top: 4px; }
+
+/* Equipment tab: a narrower doll, a wider item grid */
+@media (min-width: 861px) { .invcols.gearcols { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) !important; } }
