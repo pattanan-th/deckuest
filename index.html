@@ -1214,7 +1214,7 @@ function rerender() {
 }
 
 // version shown small on the home / profile screens and in the pause menu; bump it with every release
-const GAME_VER = "1.3.1";
+const GAME_VER = "1.3.2";
 
 // ================= cards =================
 // type: atk (attack) | skl (skill) | pow (power: stays in play for the fight). r: 0 starter/weapon, 1 common, 2 uncommon, 3 rare.
@@ -3615,13 +3615,13 @@ function renderMShop() {
   const note = mergeNote ? `<div id="rollResult">${mergeNote}</div>` : "";
   let html;
   if (tab === "merge") {
-    const rows = bucketsOf(pr, () => true).filter(b => b.r < RARITY.length - 1);
+    const rows = bucketsOf(pr, () => true).filter(b => b.r < RARITY.length - 1).sort((a, b) => (b.worn.length > 0) - (a.worn.length > 0)); // worn gear first (the sort is stable)
     html = `<div class="sub" style="margin:0 0 10px">${t("mergeShopHint", MERGE_COUNT)}</div>` +
       `<div class="rollbar"><button data-qmerge="1"${rows.some(b => b.all.length >= MERGE_COUNT) ? "" : " disabled"}>${t("qmerge")}</button></div>` + note +
       `<div class="shop">` + (rows.map(b => mergeRow(pr, b)).join("") || `<div class="sub">${t("mergeNone")}</div>`) + `</div>`;
   } else if (tab === "enhance") {
     const eq = equippedUids(pr);
-    const rows = pr.items.filter(x => defOf(x.id)).sort((a, b) => b.r - a.r || (b.e || 0) - (a.e || 0) || CATALOG.findIndex(x => x.id === a.id) - CATALOG.findIndex(x => x.id === b.id));
+    const rows = pr.items.filter(x => defOf(x.id)).sort((a, b) => eq.has(b.u) - eq.has(a.u) || b.r - a.r || (b.e || 0) - (a.e || 0) || CATALOG.findIndex(x => x.id === a.id) - CATALOG.findIndex(x => x.id === b.id));
     html = `<div class="sub" style="margin:0 0 10px">${t("enhHint", Math.round(ENH_STEP * 100), ENH_MAX)}</div>` + note +
       `<div class="shop">` + (rows.map(it => {
         const v = view(it), e = it.e || 0, max = e >= ENH_MAX, cost = max ? 0 : enhCost(it);
