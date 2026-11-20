@@ -576,3 +576,17 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
   .treecards .cardrow.mini .hc { height: 236px; min-height: 236px; }
   #tree .shop { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Weapon Mastery cards: back to the small size; the level preview and the class-only / weapon marker live inside the card */
+.treecards .cardrow.mini { display: grid; grid-template-columns: repeat(auto-fill, 112px); gap: 18px 12px; justify-content: start; margin: 12px 0 6px; }
+.treecards .tcard { width: 112px; padding: 6px 0 0; gap: 6px; }
+.treecards .cardrow.mini .hc { width: 108px; max-width: none; height: 214px; min-height: 214px; position: relative; overflow: hidden; padding-bottom: 6px; }
+.treecards .tcard .mergeBtn, .treecards .tcard .price { width: 108px; max-width: none; min-height: 32px; font-size: 13px; }
+.treecards .hc .cpv { margin-top: auto; font-size: 10px; line-height: 1.25; color: var(--gold); text-align: center; padding-top: 4px; border-top: 1px solid var(--line); width: 100%; }
+.treecards .hc .ctag { position: absolute; top: -2px; right: 2px; font-size: 14px; }
+@media (max-width: 560px) {
+  .treecards .cardrow.mini { grid-template-columns: repeat(auto-fill, 108px); justify-content: center; gap: 16px 8px; }
+  .treecards .tcard { width: 108px; }
+  .treecards .cardrow.mini .hc { height: 214px; min-height: 214px; }
+}
+.treecards .tcard .mergeBtn { font-size: 12px; white-space: nowrap; padding: 4px 2px; }
