@@ -519,3 +519,12 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
 
 /* Equipment tab: a narrower doll, a wider item grid */
 @media (min-width: 861px) { .invcols.gearcols { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) !important; } }
+
+/* small headings inside a card grid (weapon kinds in the Character screen) */
+.subhead { grid-column: 1 / -1; font-weight: 700; color: var(--gold); font-size: 14px; padding: 6px 2px 0; border-bottom: 1px solid var(--line); text-align: left; }
+.subhead small { color: var(--dim); font-weight: 400; margin-left: 4px; }
+/* Weapon Mastery: perks are a card grid across the top, the cards below */
+#tree .shop { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 8px; max-width: none; width: 100%; margin: 0 0 10px; }
+#tree .shop .item { min-width: 0; }
+#tree .treecols { display: block !important; max-width: 1400px; margin: 0 auto; }
+#tree .treecols .sec { max-width: none; margin-top: 12px; }

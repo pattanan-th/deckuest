@@ -62,7 +62,7 @@ function rerender() {
 }
 
 // version shown small on the home / profile screens and in the pause menu; bump it with every release
-const GAME_VER = "1.8.0";
+const GAME_VER = "1.8.1";
 
 // ================= cards =================
 // type: atk (attack) | skl (skill) | pow (power: stays in play for the fight). r: 0 starter/weapon, 1 common, 2 uncommon, 3 rare.
@@ -2647,6 +2647,17 @@ function useBucket(pr, kind, id, r) {
   if (at >= 0) invSlot = `${type}:${at}`;
 }
 function wearAt(pr, type, i, u) { const slots = pr.acc[type], other = slots.indexOf(u); if (other >= 0 && other !== i) slots[other] = slots[i]; slots[i] = u; }
+// the weapon list, split into small headings by kind of weapon (class), then off-hand items; worn first everywhere
+function handSections(pr) {
+  const bs = wornFirst(bucketsOf(pr, d => isHandId(d.id))), secs = [];
+  const add = (key, ic, label, test) => { const rows = bs.filter(b => test(defOf(b.id))); if (rows.length) secs.push({ key, ic, label, rows, worn: rows.some(b => b.worn.length) }); };
+  for (const tg of Object.keys(THEMES)) add(tg, THEMES[tg].ic, tr(THEMES[tg].n), d => isWeaponId(d.id) && d.tag === tg);
+  add("off", "🛡️", L("มือรอง / โล่", "Off-hand"), d => !isWeaponId(d.id));
+  add("other", "🪵", L("อื่นๆ", "Other"), d => isWeaponId(d.id) && !THEMES[d.tag]);
+  secs.sort((a, b) => b.worn - a.worn); // kinds you are using come first
+  if (!secs.length) return "";
+  return secs.map(sc => `<div class="subhead">${sc.ic} ${sc.label} <small>${sc.rows.reduce((n, b) => n + b.all.length, 0)}</small></div>` + sc.rows.map(b => bucketRow(pr, b, "hand")).join("")).join("");
+}
 const wornFirst = bs => bs.sort((a, b) => (b.worn.length > 0) - (a.worn.length > 0)); // stable: the rest keep their rarity order
 // the small card under the doll: what the selected slot holds right now
 function slotDetail(pr) {
@@ -2668,7 +2679,7 @@ function renderAllItems(pr, part = "gear") {
     `<div class="sec igrp${type === selType ? " focus" : ""}" id="grp-${type}"><h3>${ic ? ic + " " : ""}${label}</h3><div class="shop" style="margin:0">` +
     (rows || `<div class="sub" style="margin:0">${t("invNoneForSlot")}</div>`) + `</div></div>`;
   let html = part === "pass" ? "" : group("hand", "✋", `${L("อาวุธและมือรอง", "Weapons & off-hand")} <small style="color:var(--dim)">· ${L("ไม่ถือเลย = มือเปล่า 🥋", "empty hands = Martial 🥋")}</small>`,
-      wornFirst(bucketsOf(pr, d => isHandId(d.id))).map(b => bucketRow(pr, b, "hand")).join(""), true) +
+      handSections(pr), true) +
     group("armor", "👕", t("slot_armor"), wornFirst(bucketsOf(pr, d => ARMORS.includes(d))).map(b => bucketRow(pr, b, "armor")).join(""), true);
   if (part === "gear") for (const sl of ACC_SLOTS) {
     const bs = wornFirst(bucketsOf(pr, d => d.type === sl.type));
