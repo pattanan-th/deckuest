@@ -62,7 +62,7 @@ function rerender() {
 }
 
 // version shown small on the home / profile screens and in the pause menu; bump it with every release
-const GAME_VER = "1.3.3";
+const GAME_VER = "1.4.0";
 
 // ================= cards =================
 // type: atk (attack) | skl (skill) | pow (power: stays in play for the fight). r: 0 starter/weapon, 1 common, 2 uncommon, 3 rare.
@@ -485,7 +485,7 @@ function gearDesc(g, who, compact) {
 }
 
 // ================= passive skills (permanent, rolled in the Skill shop) =================
-const PASSIVE_SLOTS = 3, PASS_MAX = 5, PASS_ROLL = 220, PASS_BULK = 205;
+const PASSIVE_SLOTS = 3, PASS_MAX = 10, PASS_ROLL = 220, PASS_BULK = 205;
 const rollCost = (n, single, bulk) => n * (n >= 10 ? bulk : single);
 const maxRolls = (gold, single, bulk) => Math.max(0, Math.min(500, gold >= 10 * bulk ? Math.floor(gold / bulk) : Math.floor(gold / single)));
 const rollQty = { proll: 25 };
@@ -493,21 +493,23 @@ const PASS_TIERS = [
   { n: "Common", c: "#b8b8c8", w: 50 }, { n: "Rare", c: "#4da3ff", w: 30 },
   { n: "Epic", c: "#b06bff", w: 15 }, { n: "Legendary", c: "#ffb020", w: 5 },
 ];
+// past Lv5 a passive grows at half speed (Lv10 = about Lv7.5), and the strongest effects are capped
+const ex = lv => lv <= 5 ? lv : 5 + (lv - 5) * 0.5;
 const PF = { // one formula per effect, shared by the shop text and the combat code
-  fortify: lv => 2 + 2 * lv,           // Block at the start of every fight
-  keen: lv => lv,                      // +damage per attack hit
-  thrifty: lv => 0.08 * lv,            // +gold
-  alch: lv => 0.08 * lv,               // potions heal more (share of max HP)
-  mend: lv => 2 + 2 * lv,              // HP healed after each won fight
-  quick: lv => 0.05 * lv,              // chance to draw +1 each turn (turn 1 always +1)
-  momentum: lv => 0.03 * lv,           // combo per earlier attack card
-  thorns: lv => 1 + lv,                // damage back to an enemy that hits you
-  laststand: lv => 0.2 + 0.1 * lv,     // damage bonus under 30% HP
-  dualmaster: lv => 1 + 0.1 * (lv - 1),// right-hand weapon share (normally 0.5)
-  scholar: lv => 0.1 * lv,             // card luck
-  overflow: lv => 0.06 + 0.04 * lv,    // chance of +1 energy each turn
-  recycle: lv => 2 + lv,               // damage to a random enemy per card discarded from hand
-  patience: lv => lv,                  // Block per card kept in hand at the end of your turn
+  fortify: lv => Math.round(2 + 2 * ex(lv)),           // Block at the start of every fight
+  keen: lv => Math.round(ex(lv)),                      // +damage per attack hit
+  thrifty: lv => 0.08 * ex(lv),            // +gold
+  alch: lv => 0.08 * ex(lv),               // potions heal more (share of max HP)
+  mend: lv => Math.round(2 + 2 * ex(lv)),              // HP healed after each won fight
+  quick: lv => 0.05 * ex(lv),              // chance to draw +1 each turn (turn 1 always +1)
+  momentum: lv => 0.03 * ex(lv),           // combo per earlier attack card
+  thorns: lv => Math.round(1 + ex(lv)),                // damage back to an enemy that hits you
+  laststand: lv => Math.min(0.8, 0.2 + 0.1 * ex(lv)),     // damage bonus under 30% HP
+  dualmaster: lv => Math.min(1.5, 1 + 0.1 * (ex(lv) - 1)),// right-hand weapon share (normally 0.5)
+  scholar: lv => 0.1 * ex(lv),             // card luck
+  overflow: lv => Math.min(0.35, 0.06 + 0.04 * ex(lv)),    // chance of +1 energy each turn
+  recycle: lv => Math.round(2 + ex(lv)),               // damage to a random enemy per card discarded from hand
+  patience: lv => Math.round(ex(lv)),                  // Block per card kept in hand at the end of your turn
   pockets: lv => lv >= 5 ? 3 : lv >= 3 ? 2 : 1, // hand limit +
 };
 const PASSIVES = [
@@ -631,8 +633,12 @@ const statResetCost = pr => 50 * pr.lvl;
 const reqFactor = (pr, g) => { if (!g.req) return 1; let f = 1; for (const k in g.req) f = Math.min(f, statOf(pr, k) / g.req[k]); return Math.max(REQ_FLOOR, Math.min(1, f)); };
 // a weapon's multiplier for its class cards and Strike/Defend
 const weaponMult = (pr, w) => +((1 + Object.entries(w.sc || {}).reduce((a, [k, g]) => a + GRADE[g] * (statOf(pr, k) - STAT_BASE), 0)) * reqFactor(pr, w)).toFixed(3);
-// mastery: playing a class's cards levels that class; each level = 1 point for card levels (Lv1-5) and perks
-const MAST_MAX = 30, mastNeed = lv => 10 + 6 * lv, LV_STEP = 0.12, CARD_LV_MAX = 5;
+// mastery: playing a class's cards levels that class; each level = 1 point for card levels (Lv1-10) and perks
+const MAST_MAX = 30, mastNeed = lv => 10 + 6 * lv, LV_STEP = 0.12, LV_STEP2 = 0.06, CARD_LV_MAX = 10, CARD_LV_CUT = 5;
+// card power: +12% per level up to Lv5, +6% per level after; going from Lv5 on costs 2 points per level; Lv5 also makes the card 1⚡ cheaper
+const cardLvMul = lv => 1 + LV_STEP * (Math.min(lv, 5) - 1) + LV_STEP2 * Math.max(0, lv - 5);
+const cardLvCost = lv => lv >= 5 ? 2 : 1;
+const cardLvTotal = lv => { let n = 0; for (let i = 1; i < lv; i++) n += cardLvCost(i); return n; };
 const PERKS = {
   berserker: [
     { id: "brs1", lv: 2, cost: 2, ic: "🪨", t: ["แขนเหล็ก", "Iron Arms"], d: ["การ์ด Berserker ดาเมจ +4", "Berserker cards +4 damage"], card: { dmg: 4 } },
@@ -682,7 +688,7 @@ const themeCards = tag => Object.keys(CARDS).filter(id => CARDS[id].tag === tag)
 function cardFx(c, st) {
   const d = cardOf(c);
   if (!st) return d;
-  const lv = (st.cardLv && st.cardLv[c.id]) || 1, pk = (d.tag && st.perkT && st.perkT[d.tag]) || {}, m = 1 + LV_STEP * (lv - 1);
+  const lv = (st.cardLv && st.cardLv[c.id]) || 1, pk = (d.tag && st.perkT && st.perkT[d.tag]) || {}, m = cardLvMul(lv);
   const e = { ...d, lv };
   if (d.dmg) e.dmg = Math.round(d.dmg * m) + (pk.dmg || 0);
   if (d.block) e.block = Math.round(d.block * m) + (pk.block || 0);
@@ -694,7 +700,7 @@ function cardFx(c, st) {
   if (pk.lone && d.lone) e.lone = d.lone + pk.lone;
   if (pk.vuln && d.type === "atk") e.vuln = (d.vuln || 0) + pk.vuln;
   if (pk.combo && d.type === "atk") e.combo = (d.combo || 0) + pk.combo;
-  if (lv >= CARD_LV_MAX) e.cost = Math.max(0, d.cost - 1);
+  if (lv >= CARD_LV_CUT) e.cost = Math.max(0, d.cost - 1);
   e.critPlus = (pk.crit || 0) + (d.crit || 0); e.mult = pk.mult || 0; e.echo = pk.echo || 0;
   return e;
 }
@@ -2712,7 +2718,7 @@ function renderTree() {
   const cards = themeCards(treeTag).map(id => {
     const lv = pr.cardLv[id] || 1, top = lv >= CARD_LV_MAX;
     return `<div class="tcard">${cardHtml({ id, up: 0 }, { st })}` +
-      (top ? `<span class="price">MAX</span>` : `<button class="mergeBtn" data-clv="${id}" style="--rc:var(--gold)"${m.pts ? "" : " disabled"}>⬆ Lv${lv + 1}${lv + 1 === CARD_LV_MAX ? " · −1⚡" : ""} · ⭐1</button>`) +
+      (top ? `<span class="price">MAX</span>` : `<button class="mergeBtn" data-clv="${id}" style="--rc:var(--gold)"${m.pts >= cardLvCost(lv) ? "" : " disabled"}>⬆ Lv${lv + 1}${lv + 1 === CARD_LV_CUT ? " · −1⚡" : ""} · ⭐${cardLvCost(lv)}</button>`) +
       (CARDS[id].only ? `<small class="sub">${L("การ์ดพิเศษของแนว", "theme-only")}</small>` : "") + `</div>`;
   }).join("") + `<div class="tcard padslot" aria-hidden="true"><div class="hc"></div><span class="price">·</span></div>`.repeat(maxCards - themeCards(treeTag).length); // every class gets the same window size
   $("treeBody").innerHTML = `<div style="font-size:44px">🌳</div><div class="big">${L("ความชำนาญอาวุธ", "Weapon Mastery")}</div>` +
@@ -2722,7 +2728,7 @@ function renderTree() {
     `<div class="sub" style="margin:6px 0 0">${L(`ได้ XP เมื่อเล่นการ์ดแนวนี้ใน run (1 ใบ = 1 XP) · เลเวลละ 1 แต้ม · การ์ดคลาสนี้สเกลกับ ${THEME_STAT[treeTag] ? THEME_STAT[treeTag].toUpperCase() : "stat สูงสุด"} (ตอนนี้ ×${st.tm[treeTag]})`, `Gain XP by playing this class's cards in runs (1 card = 1 XP) · 1 point per level · these cards scale with ${THEME_STAT[treeTag] ? THEME_STAT[treeTag].toUpperCase() : "your top stat"} (now ×${st.tm[treeTag]})`)}</div>` +
     (treeNote ? `<div id="rollResult">${treeNote}</div>` : "") + `</div>` +
     `<div class="treecols"><div>` + sec(L("✨ Perk ของแนว", "✨ Theme perks"), perks) + `</div>` +
-    `<div class="sec treecards"><h3>🃏 ${L("เลเวลการ์ด (ถาวร ทุกใบในทุก run) · เลเวลละ +12% · Lv5 ลด 1 ⚡", "Card levels (permanent, every copy in every run) · +12% per level · Lv5 costs 1 ⚡ less")}</h3><div class="cardrow mini">${cards}</div></div></div>` +
+    `<div class="sec treecards"><h3>🃏 ${L("เลเวลการ์ด (ถาวร ทุกใบในทุก run) · Lv2–5 เลเวลละ +12% · Lv5 ลด 1 ⚡ · Lv6–10 เลเวลละ +6% (ใช้ ⭐2)", "Card levels (permanent, every copy in every run) · Lv2–5 +12% per level · Lv5 costs 1 ⚡ less · Lv6–10 +6% per level (⭐2 each)")}</h3><div class="cardrow mini">${cards}</div></div></div>` +
     `<button class="ghost" data-treset="1" style="font-size:13px;padding:4px 10px">↺ ${L("คืนแต้มแนวนี้ทั้งหมด", "Refund this theme's points")} · 💰 100</button>`;
 }
 function treeClick(e) {
@@ -2736,13 +2742,13 @@ function treeClick(e) {
     m.pts -= pk.cost; pr.perks[pk.id] = true; treeNote = `${pk.ic} ${tr(pk.t)} ✔`;
   } else if (el.dataset.clv) {
     const id = el.dataset.clv, lv = pr.cardLv[id] || 1;
-    if (lv >= CARD_LV_MAX || m.pts < 1) return;
-    m.pts--; pr.cardLv[id] = lv + 1; treeNote = `${CARDS[id].ic} ${CARDS[id].t} → Lv${lv + 1}`;
+    if (lv >= CARD_LV_MAX || m.pts < cardLvCost(lv)) return;
+    m.pts -= cardLvCost(lv); pr.cardLv[id] = lv + 1; treeNote = `${CARDS[id].ic} ${CARDS[id].t} → Lv${lv + 1}`;
   } else if (el.dataset.treset) {
     if (pr.gold < 100) { treeNote = t("noGold"); return renderTree(); }
     let back = 0;
     for (const pk of PERKS[treeTag]) if (pr.perks[pk.id]) { back += pk.cost; delete pr.perks[pk.id]; }
-    for (const id of themeCards(treeTag)) if (pr.cardLv[id] > 1) { back += pr.cardLv[id] - 1; delete pr.cardLv[id]; }
+    for (const id of themeCards(treeTag)) if (pr.cardLv[id] > 1) { back += cardLvTotal(pr.cardLv[id]); delete pr.cardLv[id]; }
     if (!back) return;
     pr.gold -= 100; m.pts += back; treeNote = L(`คืน ⭐${back}`, `Refunded ⭐${back}`);
   }
