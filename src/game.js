@@ -62,7 +62,7 @@ function rerender() {
 }
 
 // version shown small on the home / profile screens and in the pause menu; bump it with every release
-const GAME_VER = "1.6.0";
+const GAME_VER = "1.7.1";
 
 // ================= cards =================
 // type: atk (attack) | skl (skill) | pow (power: stays in play for the fight). r: 0 starter/weapon, 1 common, 2 uncommon, 3 rare.
@@ -933,7 +933,10 @@ function migrateClasses(pr) {
   pr.cv = 2;
 }
 let store = loadStore();
-function saveStore() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(store)); } catch {} }
+function saveStore(stamp = true) { // every save stamps the current profile with the time, so a transfer can tell which copy is newer
+  if (stamp) { const p = store.profiles.find(x => x.id === store.current); if (p) p.upd = Date.now(); }
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(store)); } catch {}
+}
 const prof = () => store.profiles.find(x => x.id === store.current);
 
 function createProfile() {
@@ -1044,14 +1047,26 @@ async function unpackSave(code) {
   if (!sv || !Array.isArray(sv.profiles) || !sv.profiles.length) throw new Error("bad save");
   return sv;
 }
-// bring profiles in: the same profile (same id) is replaced, every other profile on this device stays
+// bring profiles in: the same profile (same id) is replaced, every other profile on this device stays.
+// Before replacing, show both copies side by side and warn when the incoming one looks older.
+const progScore = p => (p.lvl || 1) * 1e6 + (p.xp || 0) * 100 + ((p.stats && p.stats.runs) || 0);
+const fmtWhen = t => t ? new Date(t).toLocaleString(ui === "th" ? "th-TH" : "en-GB", { dateStyle: "medium", timeStyle: "short" }) : L("ไม่ทราบเวลา", "time unknown");
+const profBrief = p => `Lv ${p.lvl || 1} · 💰 ${p.gold || 0} · ${(p.stats && p.stats.runs) || 0} run · ${fmtWhen(p.upd)}`;
 function importSave(sv) {
-  const names = sv.profiles.map(p => p.name).join(", ");
-  if (!confirm(L(`นำเข้าเซฟ ${sv.profiles.length} โปรไฟล์ (${names})?\nถ้ามีโปรไฟล์เดียวกันในเครื่องนี้จะถูกแทนที่ ส่วนโปรไฟล์อื่นยังอยู่`, `Import ${sv.profiles.length} profile(s) (${names})?\nThe same profiles on this device are replaced; other profiles stay.`))) return false;
+  const lines = []; let older = false;
+  for (const p of sv.profiles) {
+    const mine = store.profiles.find(x => x.id === p.id);
+    if (!mine) { lines.push(`🆕 ${p.name}: ${profBrief(p)}`); continue; }
+    const isOlder = p.upd && mine.upd ? p.upd < mine.upd : progScore(p) < progScore(mine);
+    if (isOlder) older = true;
+    lines.push(`${isOlder ? "⚠️" : "✔"} ${p.name}\n   ${L("ที่รับเข้า", "Incoming")}: ${profBrief(p)}\n   ${L("ในเครื่องนี้", "On this device")}: ${profBrief(mine)}${isOlder ? "\n   " + L("→ ของที่รับเข้า เก่ากว่า ในเครื่องนี้!", "→ the incoming save is OLDER than this device's!") : ""}`);
+  }
+  const head = older ? L("⚠️ ระวัง: มีโปรไฟล์ที่ของที่รับเข้าเก่ากว่า ถ้าตกลงจะทับของใหม่ในเครื่องนี้\n\n", "⚠️ Careful: an incoming profile is older than yours here. Continuing will overwrite the newer one.\n\n") : "";
+  if (!confirm(head + L("นำเข้าเซฟ:\n\n", "Import this save:\n\n") + lines.join("\n\n") + "\n\n" + L("โปรไฟล์ที่ซ้ำกันจะถูกแทนที่ ส่วนโปรไฟล์อื่นในเครื่องนี้ยังอยู่", "Matching profiles are replaced; your other profiles stay."))) return false;
   sv.profiles.forEach(ensureProfile);
   for (const p of sv.profiles) { const i = store.profiles.findIndex(x => x.id === p.id); if (i >= 0) store.profiles[i] = p; else store.profiles.push(p); }
   store.current = sv.profiles.some(x => x.id === sv.current) ? sv.current : sv.profiles[0].id;
-  saveStore(); return true;
+  saveStore(false); return true; // keep the save's own timestamp
 }
 let xfer = null; // a save transfer in progress: { peer, conn }
 function xferStop() { if (xfer) { try { xfer.conn && xfer.conn.close(); } catch {} try { xfer.peer && xfer.peer.destroy(); } catch {} } xfer = null; }
@@ -2632,16 +2647,31 @@ function useBucket(pr, kind, id, r) {
   if (at >= 0) invSlot = `${type}:${at}`;
 }
 function wearAt(pr, type, i, u) { const slots = pr.acc[type], other = slots.indexOf(u); if (other >= 0 && other !== i) slots[other] = slots[i]; slots[i] = u; }
+const wornFirst = bs => bs.sort((a, b) => (b.worn.length > 0) - (a.worn.length > 0)); // stable: the rest keep their rarity order
+// the small card under the doll: what the selected slot holds right now
+function slotDetail(pr) {
+  const s = slotInfo(pr, invSlot), it = s.item;
+  if (invSlot === "hand:1" && twoHanded(pr)) return `<div class="sdet"><span class="ic">🔒</span><div><b>${s.label}</b><div class="d">${L("ถูกใช้โดยอาวุธสองมือ", "Used by your two-handed weapon")}</div></div></div>`;
+  return it ? `<div class="sdet" style="--rc:${RARITY[it.r].c}"><span class="ic">${it.ic}</span><div><small>${s.label}</small><div>${rName(it)}</div><div class="d">${gearDesc(it)}</div></div></div>`
+    : `<div class="sdet empty"><span class="ic">${s.ph}</span><div><b>${s.label}</b><div class="d">${L("ว่างอยู่ · เลือกของจากรายการทางขวา", "Empty · pick something from the list")}</div></div></div>`;
+}
+// one chip per kind of gear: tap to list just that kind
+function gearChips(pr) {
+  const cur = invSlot === "armor" ? "armor" : invSlot.split(":")[0];
+  const kinds = [["hand", "✋", L("อาวุธ/มือรอง", "Weapons"), d => isHandId(d.id), invSlot.startsWith("hand:") ? invSlot : "hand:0"], ["armor", "👕", t("slot_armor"), d => ARMORS.includes(d), "armor"],
+    ...ACC_SLOTS.map(sl => [sl.type, sl.ic, t("slot_" + sl.type), d => d.type === sl.type, sl.type + ":0"])];
+  return `<div class="gchips">${kinds.map(([k, ic, n, test, key]) => { const c = bucketsOf(pr, test).reduce((a, b) => a + b.all.length, 0); return `<button class="ghost${k === cur ? " on" : ""}" data-pick="${key}">${ic} ${n} <small>${c}</small></button>`; }).join("")}</div>`;
+}
 function renderAllItems(pr, part = "gear") {
   const selType = invSlot === "armor" ? "armor" : invSlot.split(":")[0];
-  const group = (type, ic, label, rows, showIt) => !showIt ? "" :
+  const group = (type, ic, label, rows, showIt) => (part === "gear" ? type !== selType : !showIt) ? "" :
     `<div class="sec igrp${type === selType ? " focus" : ""}" id="grp-${type}"><h3>${ic ? ic + " " : ""}${label}</h3><div class="shop" style="margin:0">` +
     (rows || `<div class="sub" style="margin:0">${t("invNoneForSlot")}</div>`) + `</div></div>`;
   let html = part === "pass" ? "" : group("hand", "✋", `${L("อาวุธและมือรอง", "Weapons & off-hand")} <small style="color:var(--dim)">· ${L("ไม่ถือเลย = มือเปล่า 🥋", "empty hands = Martial 🥋")}</small>`,
-      bucketsOf(pr, d => isHandId(d.id)).map(b => bucketRow(pr, b, "hand")).join(""), true) +
-    group("armor", "👕", t("slot_armor"), bucketsOf(pr, d => ARMORS.includes(d)).map(b => bucketRow(pr, b, "armor")).join(""), true);
+      wornFirst(bucketsOf(pr, d => isHandId(d.id))).map(b => bucketRow(pr, b, "hand")).join(""), true) +
+    group("armor", "👕", t("slot_armor"), wornFirst(bucketsOf(pr, d => ARMORS.includes(d))).map(b => bucketRow(pr, b, "armor")).join(""), true);
   if (part === "gear") for (const sl of ACC_SLOTS) {
-    const bs = bucketsOf(pr, d => d.type === sl.type);
+    const bs = wornFirst(bucketsOf(pr, d => d.type === sl.type));
     html += group(sl.type, sl.ic, `${t("slot_" + sl.type)} <small style="color:var(--dim)">· ${t("slots", sl.n)}</small>`, bs.map(b => bucketRow(pr, b, "acc")).join(""), bs.length || sl.type === selType);
   }
   const ownPass = PASSIVES.filter(ps => passLvOf(pr, ps.id) > 0);
@@ -2674,8 +2704,9 @@ function renderInv() {
         const n = g.req && g.req[sd.id];
         return `<span class="${!n || v >= n ? "reqok" : "reqbad"}">${g.ic} ${g.t}${n ? ` ${n}${v >= n ? "✔" : "✖"}` : ""}${g.sc && g.sc[sd.id] ? ` <b class="grade g${g.sc[sd.id]}">${g.sc[sd.id]}</b>` : ""}</span>`;
       }).join(" · ");
+      const bad = [...handViews(pr), armorView(pr), ...accOf(pr)].filter(g => g.req && g.req[sd.id] && v < g.req[sd.id]).map(g => `<span class="reqbad">${g.ic} ${g.t} ${L("ต้อง", "needs")} ${g.req[sd.id]} ✖</span>`).join(" · ");
       return `<div class="item statrow"><span class="ic">${sd.ic}</span><div class="info"><b>${sd.n} ${v}</b> <small class="sfx">${L("ตอนนี้", "now")} ${v > STAT_BASE ? statFx(sd.id, v) : "–"} → <b>+1</b> ${statFx(sd.id, v + 1)}</small>` +
-        `<div class="d">${tr(sd.d)}</div>${uses ? `<div class="d">🎒 ${uses}</div>` : ""}</div>` +
+        `<div class="d">${tr(sd.d)}</div>${bad ? `<div class="d">${bad}</div>` : ""}</div>` +
       `<button class="mergeBtn" data-stat="${sd.id}" style="--rc:var(--gold)"${pr.pts ? "" : " disabled"}>+1</button>${pr.pts >= 5 ? `<button class="mergeBtn" data-stat="${sd.id}|5" style="--rc:var(--gold)">+5</button>` : ""}</div>`;
     }).join("") +
     `<div class="sub" style="margin:4px 0 0">${L("ได้ XP จากการล้มมอนใน run (ตายก็ไม่หาย) · เลเวลละ 4 แต้ม · stat ไม่ถึงที่ของต้องการ = ของชิ้นนั้นอ่อนลง (อาวุธ: การ์ดคลาสนั้นด้วย)", "Earn XP by slaying monsters (kept on death) · 4 points per level · below an item's requirement it gets weaker (weapons: their class cards too)")}</div>` +
@@ -2691,8 +2722,8 @@ function renderInv() {
   const tabs = [["gear", "🎒", L("อุปกรณ์", "Equipment")], ["stat", "📈", "Status"], ["pass", "✨", "Passive"]];
   $("invHead").innerHTML += `<div class="tabs" id="invTabs" style="margin:8px 0 0">${tabs.map(([k, ic, n]) => `<button class="ghost${invTab === k ? " on" : ""}" data-invtab="${k}">${ic} ${n}${k === "stat" && pr.pts ? " ⭐" + pr.pts : ""}</button>`).join("")}</div>`;
   if (invTab === "gear") {
-    $("invBody").innerHTML = `<div class="invcols"><div class="invcol" id="invLeft">` + sec(t("invGear"), renderDoll(pr)) + `</div>` +
-      `<div class="invcol" id="invRight"><div class="sec" style="margin-top:0"><h3>${t("invAll")}</h3></div>${renderAllItems(pr, "gear")}</div></div>`;
+    $("invBody").innerHTML = `<div class="invcols"><div class="invcol" id="invLeft">` + sec(t("invGear"), renderDoll(pr) + slotDetail(pr)) + `</div>` +
+      `<div class="invcol" id="invRight">${gearChips(pr)}${renderAllItems(pr, "gear")}</div></div>`;
     if (right) $("invRight").scrollTop = right;
   } else if (invTab === "stat") {
     $("invBody").innerHTML = `<div class="invcols one"><div class="invcol" id="invLeft"><div class="invsplit"><div class="invA">` + statSec + `</div><div class="invB">` + statsBox + `</div><div class="invC">` + deckBox + classBox + `</div></div></div></div>`;

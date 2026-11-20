@@ -494,3 +494,14 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
 @media (min-width: 1500px) and (min-height: 640px) { #inv .shop.two { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 860px) { #inv .shop.two { grid-template-columns: minmax(0, 1fr); } }
 #inv .rollbar { flex-wrap: wrap; }
+
+/* Character > Equipment: slot chips + a detail card for the selected slot */
+.gchips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.gchips button { padding: 5px 10px; font-size: 14px; }
+.gchips button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+.gchips small { opacity: .7; margin-left: 2px; }
+.sdet { display: flex; gap: 12px; align-items: center; text-align: left; margin-top: 10px; padding: 10px 12px; border: 2px solid var(--rc, var(--line)); border-radius: 12px; background: #0003; }
+.sdet .ic { font-size: 34px; }
+.sdet.empty { border-style: dashed; opacity: .85; }
+.sdet small { color: var(--dim); }
+.reqbad { color: var(--bad); }
