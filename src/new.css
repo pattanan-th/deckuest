@@ -557,3 +557,22 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
 
 .lvpv { color: var(--dim); font-size: 11px; line-height: 1.25; text-align: center; max-width: 100%; }
 .treecards .tcard { height: 282px; }
+
+/* Weapon Mastery layout: perks in one row where there is room, cards as even tiles (card, button, preview, tag) */
+#tree .shop { grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); }
+.treecards .cardrow.mini { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 20px 14px; justify-content: stretch; margin: 14px 0 6px; }
+.treecards .tcard { height: auto; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 6px; padding: 8px 0 0; }
+.treecards .cardrow.mini .hc { width: 100%; max-width: 210px; height: 218px; min-height: 218px; overflow: hidden; }
+.treecards .tcard .mergeBtn, .treecards .tcard .price { width: 100%; max-width: 210px; min-height: 34px; display: flex; align-items: center; justify-content: center; margin: 0; box-sizing: border-box; }
+.treecards .tcard .lvpv { min-height: 30px; width: 100%; max-width: 210px; display: flex; align-items: flex-start; justify-content: center; }
+.treecards .tcard .tagl { min-height: 16px; font-size: 11px; color: var(--gold); margin: 0; }
+.treecards .tcard.padslot .hc { border: 0; background: none; }
+#tree .shop .item { min-height: 92px; align-items: center; }
+#tree .treecols > div .sec h3 { margin-bottom: 8px; }
+#tree .shop { grid-auto-rows: 124px; }
+#tree .shop .item { height: 124px; min-height: 0; overflow: hidden; }
+@media (max-width: 560px) {
+  .treecards .cardrow.mini { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 10px; }
+  .treecards .cardrow.mini .hc { height: 236px; min-height: 236px; }
+  #tree .shop { grid-template-columns: minmax(0, 1fr); }
+}

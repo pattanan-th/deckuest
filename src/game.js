@@ -62,7 +62,7 @@ function rerender() {
 }
 
 // version shown small on the home / profile screens and in the pause menu; bump it with every release
-const GAME_VER = "1.13.1";
+const GAME_VER = "1.13.2";
 
 // ================= cards =================
 // type: atk (attack) | skl (skill) | pow (power: stays in play for the fight). r: 0 starter/weapon, 1 common, 2 uncommon, 3 rare.
@@ -3028,9 +3028,9 @@ function renderTree() {
   const cards = themeCards(treeTag).map(id => {
     const lv = pr.cardLv[id] || 1, top = lv >= CARD_LV_MAX;
     return `<div class="tcard">${cardHtml({ id, up: 0 }, { st })}` +
-      (top ? `<span class="price">MAX</span>` : `<button class="mergeBtn" data-clv="${id}" style="--rc:var(--gold)"${m.pts >= cardLvCost(lv) ? "" : " disabled"}>⬆ Lv${lv + 1}${lv + 1 === CARD_LV_CUT ? " · −1⚡" : ""} · ⭐${cardLvCost(lv)}</button><small class="lvpv">${lvPreview(id, lv, st)}</small>`) +
-      (CARDS[id].only ? `<small class="sub">${L("การ์ดพิเศษของแนว", "theme-only")}</small>` : "") + `</div>`;
-  }).join("") + `<div class="tcard padslot" aria-hidden="true"><div class="hc"></div><span class="price">·</span></div>`.repeat(maxCards - themeCards(treeTag).length); // every class gets the same window size
+      (top ? `<span class="price">MAX</span><small class="lvpv">&nbsp;</small>` : `<button class="mergeBtn" data-clv="${id}" style="--rc:var(--gold)"${m.pts >= cardLvCost(lv) ? "" : " disabled"}>⬆ Lv${lv + 1}${lv + 1 === CARD_LV_CUT ? " · −1⚡" : ""} · ⭐${cardLvCost(lv)}</button><small class="lvpv">${lvPreview(id, lv, st)}</small>`) +
+      `<small class="sub tagl">${CARDS[id].only ? "⭐ " + L("การ์ดพิเศษของแนว", "class-only") : CARDS[id].r === 0 ? "🗡️ " + L("การ์ดจากอาวุธ", "weapon card") : "&nbsp;"}</small></div>`;
+  }).join("") + `<div class="tcard padslot" aria-hidden="true"><div class="hc"></div><span class="price">·</span><small class="lvpv">&nbsp;</small><small class="sub tagl">&nbsp;</small></div>`.repeat(maxCards - themeCards(treeTag).length); // every class gets the same window size
   $("treeBody").innerHTML = `<div style="font-size:44px">🌳</div><div class="big">${L("ความชำนาญอาวุธ", "Weapon Mastery")}</div>` +
     `<div class="tabs" style="margin-top:10px">${tabs}</div>` +
     `<div class="sec" style="max-width:760px"><h3>${THEMES[treeTag].ic} ${tr(THEMES[treeTag].n)} · Lv ${m.lv}${max ? " MAX" : ""} · ${L("แต้ม", "Points")} <span style="color:var(--gold)">⭐ ${m.pts}</span></h3>` +
