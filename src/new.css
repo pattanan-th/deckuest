@@ -459,3 +459,11 @@
 
 /* touch: no double-tap zoom or tap flash on buttons and cards */
 html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+
+/* save transfer */
+.bkbox { max-width: 640px; }
+.bkgrid { display: grid; gap: 10px; }
+.bkcard { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.bkcard small { color: var(--dim); line-height: 1.3; }
+.bkadv { margin-top: 6px; text-align: left; }
+.bkadv summary { cursor: pointer; color: var(--dim); text-align: center; }
