@@ -979,6 +979,28 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
 .treecards .cardrow.mini .hc { overflow: visible; }
 .treecards .tcard { padding-top: 12px; }
 .treecards .tcard .hc .cc { z-index: 2; }
+/* arena picker: leave room for the cost badge that hangs off each card's corner */
+.argrid { padding: 12px 12px 8px; }
+/* short windows (laptops, phones held sideways): smaller enemies so HP bars and status chips are never cut; the enemy area scrolls if it still does not fit */
+#play > #arena { overflow-y: auto; scrollbar-width: thin; }
+@media (max-height: 720px) and (min-width: 1000px) {
+  .foe .fe { font-size: 56px; }
+  .foe.boss .fe { font-size: 72px; }
+  .foe .fn { margin: 2px 0; }
+  .sts { min-height: 0; margin-top: 2px; }
+  .intent { margin-bottom: 3px; }
+}
+@media (max-height: 400px) {
+  .foe .fe { font-size: 26px; }
+  .foe.boss .fe { font-size: 36px; }
+  .foe { padding: 1px 3px; }
+  .bar.fhp { height: 11px; }
+  .bar.fhp > span { font-size: 9px; line-height: 11px; }
+  #pbar { padding: 2px 8px; }
+  .pava { font-size: 22px; }
+  .energy { width: 32px; height: 32px; font-size: 16px; }
+}
+@media (max-width: 560px) and (max-height: 780px) { .foe .fe { font-size: 44px; } .foe.boss .fe { font-size: 58px; } .sts { min-height: 0; } }
 </style>
 </head>
 <body>
@@ -1332,7 +1354,7 @@ function rerender() {
 }
 
 // version shown small on the home / profile screens and in the pause menu; bump it with every release
-const GAME_VER = "1.13.4";
+const GAME_VER = "1.13.5";
 
 // ================= cards =================
 // type: atk (attack) | skl (skill) | pow (power: stays in play for the fight). r: 0 starter/weapon, 1 common, 2 uncommon, 3 rare.
