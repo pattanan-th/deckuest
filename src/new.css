@@ -554,3 +554,6 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
 .mapwrap.z-haunt { background: linear-gradient(180deg, #221b33 0%, #15111f 100%); }
 .mapwrap.z-volcano { background: linear-gradient(180deg, #3a1a14 0%, #1f0f0c 100%); }
 .mapwrap { border-radius: 12px; }
+
+.lvpv { color: var(--dim); font-size: 11px; line-height: 1.25; text-align: center; max-width: 100%; }
+.treecards .tcard { height: 282px; }
