@@ -62,7 +62,7 @@ function rerender() {
 }
 
 // version shown small on the home / profile screens and in the pause menu; bump it with every release
-const GAME_VER = "1.4.0";
+const GAME_VER = "1.5.0";
 
 // ================= cards =================
 // type: atk (attack) | skl (skill) | pow (power: stays in play for the fight). r: 0 starter/weapon, 1 common, 2 uncommon, 3 rare.
@@ -2555,7 +2555,7 @@ function mshopClick(e) {
 // ================= character screen =================
 const DOLL = { left: ["helmet:0", "armor", "pants:0", "shoes:0"], right: ["hand:0", "hand:1", "gloves:0", "necklace:0"], bottom: ["ring:0", "ring:1", "earring:0", "earring:1"] };
 let invSlot = "hand:0", mergeMsg = "";
-function openInv() { state = "inv"; show("inv"); renderInv(); }
+function openInv() { state = "inv"; invTab = "gear"; show("inv"); renderInv(); }
 function slotInfo(pr, key) {
   if (key === "armor") return { label: t("slot_armor"), ph: "👕", item: armorView(pr) };
   const [type, i] = key.split(":");
@@ -2639,23 +2639,24 @@ function useBucket(pr, kind, id, r) {
   if (at >= 0) invSlot = `${type}:${at}`;
 }
 function wearAt(pr, type, i, u) { const slots = pr.acc[type], other = slots.indexOf(u); if (other >= 0 && other !== i) slots[other] = slots[i]; slots[i] = u; }
-function renderAllItems(pr) {
+function renderAllItems(pr, part = "gear") {
   const selType = invSlot === "armor" ? "armor" : invSlot.split(":")[0];
   const group = (type, ic, label, rows, showIt) => !showIt ? "" :
     `<div class="sec igrp${type === selType ? " focus" : ""}" id="grp-${type}"><h3>${ic ? ic + " " : ""}${label}</h3><div class="shop" style="margin:0">` +
     (rows || `<div class="sub" style="margin:0">${t("invNoneForSlot")}</div>`) + `</div></div>`;
-  let html = group("hand", "✋", `${L("อาวุธและมือรอง", "Weapons & off-hand")} <small style="color:var(--dim)">· ${L("ไม่ถือเลย = มือเปล่า 🥋", "empty hands = Martial 🥋")}</small>`,
+  let html = part === "pass" ? "" : group("hand", "✋", `${L("อาวุธและมือรอง", "Weapons & off-hand")} <small style="color:var(--dim)">· ${L("ไม่ถือเลย = มือเปล่า 🥋", "empty hands = Martial 🥋")}</small>`,
       bucketsOf(pr, d => isHandId(d.id)).map(b => bucketRow(pr, b, "hand")).join(""), true) +
     group("armor", "👕", t("slot_armor"), bucketsOf(pr, d => ARMORS.includes(d)).map(b => bucketRow(pr, b, "armor")).join(""), true);
-  for (const sl of ACC_SLOTS) {
+  if (part === "gear") for (const sl of ACC_SLOTS) {
     const bs = bucketsOf(pr, d => d.type === sl.type);
     html += group(sl.type, sl.ic, `${t("slot_" + sl.type)} <small style="color:var(--dim)">· ${t("slots", sl.n)}</small>`, bs.map(b => bucketRow(pr, b, "acc")).join(""), bs.length || sl.type === selType);
   }
   const ownPass = PASSIVES.filter(ps => passLvOf(pr, ps.id) > 0);
-  html += group("passive", "", t("invPassive"), ownPass.map(ps => passRow(pr, ps, false)).join(""), ownPass.length > 0);
+  if (part === "pass") return ownPass.map(ps => passRow(pr, ps, false)).join("") || `<div class="sub">${t("invNoneForSlot")}</div>`;
   html += group("items", "", t("invItems"), MITEMS.map(it => `<div class="item"><span class="ic">${it.ic}</span><div class="info"><b>${it.t}</b><div class="d">${tr(it.d)}</div></div><span class="price">x${pr.inv[it.id] || 0}</span></div>`).join(""), true);
   return html;
 }
+let invTab = "gear";
 function renderInv() {
   const pr = prof(), s = statsOf(pr);
   const stat = (label, val) => `<div class="stat">${label}<b>${val}</b></div>`;
@@ -2687,19 +2688,26 @@ function renderInv() {
     `<div class="sub" style="margin:4px 0 0">${L("ได้ XP จากการล้มมอนใน run (ตายก็ไม่หาย) · เลเวลละ 4 แต้ม · stat ไม่ถึงที่ของต้องการ = ของชิ้นนั้นอ่อนลง (อาวุธ: การ์ดคลาสนั้นด้วย)", "Earn XP by slaying monsters (kept on death) · 4 points per level · below an item's requirement it gets weaker (weapons: their class cards too)")}</div>` +
     `<div class="chips" style="margin-top:6px"><span class="sub" style="margin:0;width:100%">${L("พลังการ์ดตอนนี้:", "Card power now:")}</span><span class="lchip">🃏 Strike/Defend ×${s.tm._atk}</span>${Object.keys(THEMES).map(tg => `<span class="lchip${s.pen[tg] ? " bad" : ""}${s.tags[tg] ? " theme" : ""}">${THEMES[tg].ic} ${tr(THEMES[tg].n)} ×${s.tm[tg]}</span>`).join("")}</div>` +
     `<button class="ghost" data-statreset="1" style="margin-top:8px;font-size:13px;padding:4px 10px"${spent ? "" : " disabled"}>↺ ${L("คืนแต้ม stat ทั้งหมด", "Refund all stat points")} · 💰 ${statResetCost(pr)}</button>`);
-  $("invBody").innerHTML = `<div class="invcols"><div class="invcol" id="invLeft"><div class="invsplit"><div class="invA">` + statSec + `</div><div class="invB">` +
-    sec(t("invGear"), renderDoll(pr)) +
-    sec(t("invStats"), `<div class="statgrid">${stat("❤️ HP", s.hp)}${stat("⚔️ " + L("ดาเมจ", "Damage"), "+" + pc(s.atk) + "%")}${stat("🛡️ Block", "+" + pc(s.def) + "%")}` +
+  const statsBox = sec(t("invStats"), `<div class="statgrid">${stat("❤️ HP", s.hp)}${stat("⚔️ " + L("ดาเมจ", "Damage"), "+" + pc(s.atk) + "%")}${stat("🛡️ Block", "+" + pc(s.def) + "%")}` +
       `${stat("🎯 Crit", pc(s.crit) + "%")}${stat("💥 Crit DMG", "x" + s.critMult)}${stat("🌬️ " + L("หลบ", "Dodge"), pc(s.dodge) + "%")}` +
       `${stat("⚡ " + L("โอกาส +1⚡", "+1⚡ chance"), pc(s.enChance) + "%")}${stat("🧪 " + t("invPotions"), Math.min(3, pr.inv.potion || 0))}${stat("🥋 " + L("สถานะ", "Stance"), s.unarmed ? L("มือเปล่า", "Unarmed") : L("ถืออาวุธ", "Armed"))}</div>` +
-      (perks.length ? `<div class="sub" style="margin:0">✨ ${t("invPerks")}: ${perks.join(" · ")}</div>` : "")) +
-    `</div><div class="invC">` +
-    sec(L("🃏 เด็คเริ่มต้น: Strike ×5 · Defend ×4 · การ์ดจากของในมือ", "🃏 Starting deck: Strike ×5 · Defend ×4 · cards from what you hold"), `<div class="cardrow mini" style="margin:6px 0">${startDeck.map(c => cardHtml(c, { st: s })).join("")}</div>`) +
-    sec(L("🔗 คลาสจากของในมือ", "🔗 Classes from what you hold"), `<div class="sub" style="margin:0 0 6px">${L("ถืออาวุธ/มือรองคลาสไหน จะเจอการ์ดคลาสนั้นบ่อยขึ้นและปลดล็อกการ์ดพิเศษ · ไม่ถืออาวุธ = มือเปล่า", "Held weapons/off-hands make their class's cards show up more and unlock its special cards · no weapon = Martial")}</div>` +
-      `<div class="chips">${Object.entries(s.tags).map(([tg, n]) => themeChip(tg, n)).join("")}</div>`) +
-    sec(t("invPassive"), passiveSlotsHtml(pr)) +
-    `</div></div></div><div class="invcol" id="invRight"><div class="sec" style="margin-top:0"><h3>${t("invAll")}</h3></div>${renderAllItems(pr)}</div></div>`;
-  if (right) $("invRight").scrollTop = right;
+      (perks.length ? `<div class="sub" style="margin:0">✨ ${t("invPerks")}: ${perks.join(" · ")}</div>` : ""));
+  const deckBox = sec(L("🃏 เด็คเริ่มต้น: Strike ×5 · Defend ×4 · การ์ดจากของในมือ", "🃏 Starting deck: Strike ×5 · Defend ×4 · cards from what you hold"), `<div class="cardrow mini" style="margin:6px 0">${startDeck.map(c => cardHtml(c, { st: s })).join("")}</div>`);
+  const classBox = sec(L("🔗 คลาสจากของในมือ", "🔗 Classes from what you hold"), `<div class="sub" style="margin:0 0 6px">${L("ถืออาวุธ/มือรองคลาสไหน จะเจอการ์ดคลาสนั้นบ่อยขึ้นและปลดล็อกการ์ดพิเศษ · ไม่ถืออาวุธ = มือเปล่า", "Held weapons/off-hands make their class's cards show up more and unlock its special cards · no weapon = Martial")}</div>` +
+      `<div class="chips">${Object.entries(s.tags).map(([tg, n]) => themeChip(tg, n)).join("")}</div>`);
+  const tabs = [["gear", "🎒", L("อุปกรณ์", "Equipment")], ["stat", "📈", "Status"], ["pass", "✨", "Passive"]];
+  $("invHead").innerHTML += `<div class="tabs" id="invTabs" style="margin:8px 0 0">${tabs.map(([k, ic, n]) => `<button class="ghost${invTab === k ? " on" : ""}" data-invtab="${k}">${ic} ${n}${k === "stat" && pr.pts ? " ⭐" + pr.pts : ""}</button>`).join("")}</div>`;
+  if (invTab === "gear") {
+    $("invBody").innerHTML = `<div class="invcols"><div class="invcol" id="invLeft">` + sec(t("invGear"), renderDoll(pr)) + `</div>` +
+      `<div class="invcol" id="invRight"><div class="sec" style="margin-top:0"><h3>${t("invAll")}</h3></div>${renderAllItems(pr, "gear")}</div></div>`;
+    if (right) $("invRight").scrollTop = right;
+  } else if (invTab === "stat") {
+    $("invBody").innerHTML = `<div class="invcols one"><div class="invcol" id="invLeft"><div class="invsplit"><div class="invA">` + statSec + `</div><div class="invB">` + statsBox + `</div><div class="invC">` + deckBox + classBox + `</div></div></div></div>`;
+  } else {
+    $("invBody").innerHTML = `<div class="invcols one"><div class="invcol" id="invLeft"><div class="invsplit pass"><div>` +
+      sec(L("✨ Passive ที่สวมใส่ (กดเพื่อถอด)", "✨ Worn passives (tap to remove)"), passiveSlotsHtml(pr) + `<div class="sub" style="margin:6px 0 0">${t("passiveDesc", PASSIVE_SLOTS, PASS_MAX)}</div>`) + `</div><div>` +
+      sec(t("invPassive") + " · " + L("กดเพื่อสวมใส่", "tap to wear"), renderAllItems(pr, "pass")) + `</div></div></div></div>`;
+  }
 }
 
 // ================= weapon mastery screen =================
@@ -3015,6 +3023,7 @@ $("profileChip").onclick = openProfiles;
 $("mshop").addEventListener("click", mshopClick);
 $("mshopBack").onclick = goHome;
 $("invBack").onclick = goHome;
+$("invHead").addEventListener("click", e => { const b = e.target.closest("[data-invtab]"); if (b) { invTab = b.dataset.invtab; renderInv(); } });
 $("treeBack").onclick = goHome;
 $("tree").addEventListener("click", treeClick);
 $("inv").addEventListener("click", e => {

@@ -480,3 +480,12 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
 /* story pages: a fixed-height text window, so Next / Prev stay in the same place however long the page is */
 .stText { height: calc(var(--gh) - 290px); max-height: none; min-height: 160px; }
 @media (max-width: 560px) { .stText { height: calc(var(--gh) - 270px); } }
+
+/* Character screen sub-tabs: Status and Passive use the full width */
+.invcols.one { grid-template-columns: minmax(0, 1fr) !important; }
+.invsplit.pass { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }
+@media (max-width: 860px) { .invsplit.pass { grid-template-columns: minmax(0, 1fr); } }
+#invTabs button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+#invTabs { flex-wrap: nowrap; gap: 4px; }
+#invTabs button { flex: 1 1 0; min-width: 0; padding: 7px 4px; font-size: 14px; white-space: nowrap; }
+@media (max-width: 560px) { #invTabs button { font-size: 12.5px; } }
