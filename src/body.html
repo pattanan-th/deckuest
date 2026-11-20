@@ -1,0 +1,92 @@
+<body>
+<div id="flash"></div>
+<button class="ghost" id="uiLang"></button>
+<div id="game">
+
+  <!-- home -->
+  <div id="home" class="panel center hidden">
+    <div class="chip" id="profileChip"></div>
+    <div class="logo">🃏</div>
+    <h1>Deckuest</h1>
+    <p class="sub" data-t="tagline"></p>
+    <ul class="menu" id="menu"></ul>
+    <div id="menuDesc"></div>
+    <p class="sub hint-kb" style="margin:0" data-t="homeHint"></p>
+  </div>
+
+  <!-- profiles -->
+  <div id="profiles" class="panel center hidden">
+    <button class="ghost backBtn" id="profBack" data-t="back"></button>
+    <div style="font-size:44px">👤</div>
+    <div class="big" data-t="chooseProfile"></div>
+    <div class="plist" id="plist"></div>
+    <div class="newp">
+      <div id="np1">
+        <div class="sub" style="margin:0" data-t="newProfile"></div>
+        <div class="avatars" id="avatars"></div>
+        <div class="row" style="justify-content:center">
+          <input id="pname" maxlength="16" data-tp="namePh" autocomplete="off">
+          <button id="nextBtn"></button>
+        </div>
+      </div>
+      <div id="np2" class="hidden">
+        <div id="npHead"></div>
+        <div id="starterPick"></div>
+        <div class="row" style="justify-content:center">
+          <button class="ghost" id="npBack"></button>
+          <button id="createBtn"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- character / inventory -->
+  <div id="inv" class="panel center hidden">
+    <button class="ghost backBtn" id="invBack" data-t="menu"></button>
+    <div id="invHead"></div>
+    <div id="invBody"></div>
+  </div>
+
+  <!-- weapon mastery -->
+  <div id="tree" class="panel center hidden">
+    <button class="ghost backBtn" id="treeBack" data-t="menu"></button>
+    <div id="treeBody"></div>
+  </div>
+
+  <!-- main shop -->
+  <div id="mshop" class="panel center hidden">
+    <button class="ghost backBtn" id="mshopBack" data-t="menu"></button>
+    <div style="font-size:44px">🏪</div>
+    <div class="big" data-t="mshop"></div>
+    <div class="sub" style="margin:4px 0 12px">💰 <b id="bankGold" style="color:var(--gold)"></b></div>
+    <div class="mcols">
+      <nav id="mlist"></nav>
+      <div class="mright"><div class="tabs" id="mshopTabs"></div><div id="mshopBody"></div></div>
+    </div>
+    <p class="sub hint-kb" style="margin:10px 0 0" data-t="mshopHint"></p>
+  </div>
+
+  <!-- story -->
+  <div id="story" class="panel center hidden">
+    <button class="ghost backBtn" id="storyBack" data-t="menu"></button>
+    <div id="storyBody"></div>
+  </div>
+
+  <!-- run: map / doors / story path -->
+  <div id="run" class="panel hidden">
+    <div class="rhead" id="rhead"></div>
+    <div id="rbody" class="center"></div>
+  </div>
+
+  <!-- fight -->
+  <div id="play" class="hidden">
+    <div class="rhead" id="phead"></div>
+    <div class="panel" id="arena"><div id="foes"></div></div>
+    <div class="panel" id="pbar"></div>
+    <div id="hand"></div>
+    <div id="piles"></div>
+  </div>
+
+  <div id="ov" class="overlay hidden"></div>
+  <div id="pov" class="overlay hidden"></div>
+</div>

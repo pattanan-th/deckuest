@@ -1,0 +1,5 @@
+# only the game (index.html) and its sources are published
+*.epub
+backup/
+index_realtime_backup.html
+__pycache__/
