@@ -25,7 +25,7 @@ Object.assign(I18N.th, {
   oneHand: "🖐 มือเดียว (ถือสองเล่มได้)", twoHand: "🙌 สองมือ (ปิดอีกมือ)", offhandShare: n => `🤚 อาวุธเล่มที่สอง (ค่าพลัง ${n}%)`,
   tagline: "เกมการ์ด roguelike · สร้างเด็ค ตีมอน เก็บอุปกรณ์ถาวร · ดวลกับเพื่อน",
   mPlayD: "เลือกโหมด: แผนที่ · หอคอยไร้สิ้นสุด · สนามจัดเด็ค · PvP · เนื้อเรื่อง",
-  mshopHint: "ทองจากแต่ละ run เข้าคลังตอนจบ run · <kbd>1</kbd>–<kbd>8</kbd> เลือกพ่อค้า · <kbd>Esc</kbd> กลับเมนู",
+  mshopHint: "ทองจากแต่ละ run เข้าคลังตอนจบ run · <kbd>1</kbd>–<kbd>7</kbd> เลือกพ่อค้า · <kbd>Esc</kbd> กลับเมนู",
   invStats: "📊 สถานะตอนเริ่ม run", invPotions: "ยาที่พกเข้า run",
   invNoneForSlot: "ยังไม่มีของช่องนี้ · ซื้อที่ร้านค้า หรือหาจาก elite/บอส",
   homeHint: "<kbd>↑</kbd> <kbd>↓</kbd> เลือก · <kbd>Enter</kbd> ตกลง",
@@ -34,7 +34,7 @@ Object.assign(I18N.en, {
   oneHand: "🖐 One-handed (can dual wield)", twoHand: "🙌 Two-handed (locks the other hand)", offhandShare: n => `🤚 Second weapon (${n}% stats)`,
   tagline: "A roguelike deckbuilder · build a deck, slay monsters, keep your gear, duel your friends",
   mPlayD: "Choose a mode: Map · Endless Tower · Deck Arena · PvP · Story",
-  mshopHint: "Gold from a run is banked when it ends · <kbd>1</kbd>–<kbd>8</kbd> pick merchant · <kbd>Esc</kbd> back to menu",
+  mshopHint: "Gold from a run is banked when it ends · <kbd>1</kbd>–<kbd>7</kbd> pick merchant · <kbd>Esc</kbd> back to menu",
   invStats: "📊 Stats at run start", invPotions: "Potions taken into a run",
   invNoneForSlot: "Nothing for this slot yet · buy it in the Shop or find it on elites/bosses",
 });
@@ -62,7 +62,7 @@ function rerender() {
 }
 
 // version shown small on the home / profile screens and in the pause menu; bump it with every release
-const GAME_VER = "1.5.0";
+const GAME_VER = "1.6.0";
 
 // ================= cards =================
 // type: atk (attack) | skl (skill) | pow (power: stays in play for the fight). r: 0 starter/weapon, 1 common, 2 uncommon, 3 rare.
@@ -2386,7 +2386,6 @@ function storyClear() {
 const MTABS = [
   { id: "items", ic: "🧪", key: "tabItems" }, { id: "weapons", ic: "⚔️", key: "tabWeapons" },
   { id: "armor", ic: "🛡️", key: "tabArmor" }, { id: "acc", ic: "💍", key: "tabAcc" },
-  { id: "passive", ic: "✨", key: "tabPassive" },
   { id: "merge", ic: "🔨", key: "tabMerge" }, { id: "sell", ic: "💰", key: "tabSell" }, { id: "enhance", ic: "⚒️", key: "tabEnhance" },
 ];
 const MERCHANTS = [
@@ -2394,7 +2393,6 @@ const MERCHANTS = [
   { id: "armor", ic: "🛡️", tabs: ["armor"], name: { th: "บรูน่า ช่างเกราะ", en: "Bruna the Armorer" }, role: { th: "ร้านอุปกรณ์ป้องกัน", en: "Armor" }, line: { th: "เกราะดีช่วยให้รอดถึงบอส", en: "Good armor gets you to the boss" } },
   { id: "jewel", ic: "💍", tabs: ["acc"], name: { th: "ลูมิ ช่างอัญมณี", en: "Lumi the Jeweler" }, role: { th: "ร้านเครื่องประดับ", en: "Accessories" }, line: { th: "เพชรเม็ดเล็ก พลังไม่เล็กนะ", en: "Small gems, big effects" } },
   { id: "potion", ic: "🧪", tabs: ["items"], name: { th: "มิร่า นักเล่นแร่แปรธาตุ", en: "Mira the Alchemist" }, role: { th: "ร้านยา", en: "Potions" }, line: { th: "พกยาไปด้วย ตายแล้วซื้อไม่ทันนะ", en: "Bring potions, the dead can't shop" } },
-  { id: "skill", ic: "📚", tabs: ["passive"], name: { th: "ปราชญ์โอริน", en: "Sage Orin" }, role: { th: "ร้าน Passive Skill", en: "Passive Skills" }, line: { th: "ความรู้ซื้อได้ แต่ต้องดวงดีด้วย", en: "Knowledge can be bought, with a little luck" } },
   { id: "smith", ic: "🔨", tabs: ["merge"], name: { th: "ลุงค้อน ช่างรวมของ", en: "Old Hammer" }, role: { th: "ร้านรวมอุปกรณ์", en: "Merge" }, line: { th: "สามชิ้นเหมือนกัน เอามา ข้าหลอมให้", en: "Bring three alike, I'll forge one better" } },
   { id: "pawn", ic: "💰", tabs: ["sell"], name: { th: "ป้าเหรียญ พ่อค้ารับซื้อ", en: "Penny the Pawnbroker" }, role: { th: "ร้านรับซื้ออุปกรณ์", en: "Sell" }, line: { th: "ของเหลือใช้ เปลี่ยนเป็นทองได้", en: "Spare gear turns into gold" } },
   { id: "enhance", ic: "⚒️", tabs: ["enhance"], name: { th: "ฮาร์ดี้ ช่างตีบวก", en: "Hardy the Forgemaster" }, role: { th: "ร้านตีบวกอุปกรณ์", en: "Enhance" }, line: { th: "ตีพลาดเสียแค่ทอง ระดับไม่ลด", en: "A miss costs gold, never levels" } },
@@ -2497,21 +2495,23 @@ function renderMShop() {
   } else if (tab === "armor") {
     html = `<div class="sub buyhint" style="margin:0 0 10px">${t("buyCopiesHint", MERGE_COUNT)}</div><div class="shop two">` +
       ARMORS.filter(g => !g.story).map(g => shopGearRow(pr, g)).join("") + `</div>`;
-  } else if (tab === "passive") {
-    const pool = passPool(pr), agg = new Map();
-    lastPassRoll.forEach(r => { const a = agg.get(r.id) || { n: 0, isNew: false }; a.n++; a.lv = r.lv; a.isNew = a.isNew || r.isNew; agg.set(r.id, a); });
-    const result = !pool.length ? t("passAllMax") : lastPassRoll.length
-      ? `${t("rollGot")} ` + [...agg].map(([id, a]) => { const ps = PASSIVES.find(x => x.id === id); return `<b style="color:${PASS_TIERS[ps.tier].c}">${ps.ic} ${ps.t}${a.n > 1 ? " ×" + a.n : ""} ${a.isNew ? "🆕 " : ""}→ Lv${a.lv}</b>`; }).join(" · ") : "";
-    html = `<div class="sub" style="margin:0">${t("passiveDesc", PASSIVE_SLOTS, PASS_MAX)}</div>` +
-      `<div class="sub" style="margin:4px 0 0">${PASS_TIERS.map(x => `<span style="color:${x.c}">${x.n} ${x.w}%</span>`).join(" · ")}</div>` +
-      passiveSlotsHtml(pr) + rollBar("proll", PASS_ROLL, PASS_BULK, pool.length, pr.gold) + `<div id="rollResult">${result}</div>` +
-      `<div class="shop two">` + PASSIVES.map(ps => passRow(pr, ps, true)).join("") + `</div>`;
   } else {
     html = `<div class="sub buyhint" style="margin:0">${t("buyCopiesHint", MERGE_COUNT)}</div>` +
       `<div class="secgrid">` + ACC_SLOTS.map(s => sec(`${s.ic} ${t("slot_" + s.type)} <small style="color:var(--dim)">· ${t("slots", s.n)}</small>`,
         ACCESSORIES.filter(a => a.type === s.type && !a.story).map(a => shopGearRow(pr, a)).join(""))).join("") + `</div>`;
   }
   $("mshopBody").innerHTML = npc + html;
+}
+// the Passive Skill roller + list (lives in the Character screen, Passive tab)
+function passiveShopHtml(pr) {
+    const pool = passPool(pr), agg = new Map();
+  lastPassRoll.forEach(r => { const a = agg.get(r.id) || { n: 0, isNew: false }; a.n++; a.lv = r.lv; a.isNew = a.isNew || r.isNew; agg.set(r.id, a); });
+  const result = !pool.length ? t("passAllMax") : lastPassRoll.length
+    ? `${t("rollGot")} ` + [...agg].map(([id, a]) => { const ps = PASSIVES.find(x => x.id === id); return `<b style="color:${PASS_TIERS[ps.tier].c}">${ps.ic} ${ps.t}${a.n > 1 ? " ×" + a.n : ""} ${a.isNew ? "🆕 " : ""}→ Lv${a.lv}</b>`; }).join(" · ") : "";
+  return `<div class="sub" style="margin:0">${t("passiveDesc", PASSIVE_SLOTS, PASS_MAX)}</div>` +
+    `<div class="sub" style="margin:4px 0 0">${PASS_TIERS.map(x => `<span style="color:${x.c}">${x.n} ${x.w}%</span>`).join(" · ")}</div>` +
+    passiveSlotsHtml(pr) + rollBar("proll", PASS_ROLL, PASS_BULK, pool.length, pr.gold) + `<div id="rollResult">${result}</div>` +
+    `<div class="shop two">` + PASSIVES.map(ps => passRow(pr, ps, true)).join("") + `</div>`;
 }
 function mshopClick(e) {
   const pr = prof();
@@ -2529,13 +2529,6 @@ function mshopClick(e) {
     const it = addItem(pr, g.id);
     if (first && g.type && pr.acc[g.type].includes(null)) toggleAcc(pr, it.u);
     shopFlash = g.id;
-  } else if (e.target.closest("[data-proll]")) {
-    const n = rollAmount("proll", e.target.closest("[data-proll]").dataset.proll, pr.gold, PASS_ROLL, PASS_BULK);
-    if (!n || !rollPassives(pr, n)) return;
-  } else if (e.target.closest("[data-pass]")) {
-    const ps = PASSIVES.find(x => x.id === e.target.closest("[data-pass]").dataset.pass);
-    if (!passLvOf(pr, ps.id)) return;
-    togglePassive(pr, ps.id);
   } else if (e.target.closest("[data-enh]")) {
     const u = e.target.closest("[data-enh]").dataset.enh, it = itemBy(pr, u), res = it && enhanceItem(pr, u);
     mergeNote = res === "ok" ? `⚒️ ${view(it).ic} ${view(it).t} → +${it.e}` : res === "fail" ? t("enhFail") : res === "gold" ? t("noGold") : "";
@@ -2555,7 +2548,7 @@ function mshopClick(e) {
 // ================= character screen =================
 const DOLL = { left: ["helmet:0", "armor", "pants:0", "shoes:0"], right: ["hand:0", "hand:1", "gloves:0", "necklace:0"], bottom: ["ring:0", "ring:1", "earring:0", "earring:1"] };
 let invSlot = "hand:0", mergeMsg = "";
-function openInv() { state = "inv"; invTab = "gear"; show("inv"); renderInv(); }
+function openInv() { state = "inv"; invTab = "gear"; lastPassRoll = []; show("inv"); renderInv(); }
 function slotInfo(pr, key) {
   if (key === "armor") return { label: t("slot_armor"), ph: "👕", item: armorView(pr) };
   const [type, i] = key.split(":");
@@ -2704,9 +2697,7 @@ function renderInv() {
   } else if (invTab === "stat") {
     $("invBody").innerHTML = `<div class="invcols one"><div class="invcol" id="invLeft"><div class="invsplit"><div class="invA">` + statSec + `</div><div class="invB">` + statsBox + `</div><div class="invC">` + deckBox + classBox + `</div></div></div></div>`;
   } else {
-    $("invBody").innerHTML = `<div class="invcols one"><div class="invcol" id="invLeft"><div class="invsplit pass"><div>` +
-      sec(L("✨ Passive ที่สวมใส่ (กดเพื่อถอด)", "✨ Worn passives (tap to remove)"), passiveSlotsHtml(pr) + `<div class="sub" style="margin:6px 0 0">${t("passiveDesc", PASSIVE_SLOTS, PASS_MAX)}</div>`) + `</div><div>` +
-      sec(t("invPassive") + " · " + L("กดเพื่อสวมใส่", "tap to wear"), renderAllItems(pr, "pass")) + `</div></div></div></div>`;
+    $("invBody").innerHTML = `<div class="invcols one"><div class="invcol" id="invLeft">` + passiveShopHtml(pr) + `</div></div>`;
   }
 }
 
@@ -3040,7 +3031,10 @@ $("inv").addEventListener("click", e => {
   }
 });
 $("invBody").addEventListener("click", e => {
-  const pr = prof(), pickEl = e.target.closest("[data-pick]");
+  const pr = prof(), rollEl = e.target.closest("[data-proll]"), passEl0 = e.target.closest("[data-pass]");
+  if (rollEl && !rollEl.disabled) { const n = rollAmount("proll", rollEl.dataset.proll, pr.gold, PASS_ROLL, PASS_BULK); if (n && rollPassives(pr, n)) { saveStore(); renderInv(); } return; }
+  if (passEl0) { if (passLvOf(pr, passEl0.dataset.pass)) { togglePassive(pr, passEl0.dataset.pass); saveStore(); renderInv(); } return; }
+  const pickEl = e.target.closest("[data-pick]");
   if (pickEl) {
     invSlot = pickEl.dataset.pick; renderInv();
     const grp = document.getElementById("grp-" + (invSlot.includes(":") ? invSlot.split(":")[0] : invSlot));
