@@ -62,7 +62,7 @@ function rerender() {
 }
 
 // version shown small on the home / profile screens and in the pause menu; bump it with every release
-const GAME_VER = "1.12.1";
+const GAME_VER = "1.13.0";
 
 // ================= cards =================
 // type: atk (attack) | skl (skill) | pow (power: stays in play for the fight). r: 0 starter/weapon, 1 common, 2 uncommon, 3 rare.
@@ -585,6 +585,7 @@ function statsOf(pr) {
     if (cls === "martial") s.tm[cls] = +(s.unarmed ? 1 + 0.03 * (top - STAT_BASE) + 0.01 * (pr.lvl - 1) : 1 + 0.01 * (top - STAT_BASE)).toFixed(3);
     else { const held = weps.filter(w => w.tag === cls); s.tm[cls] = held.length ? Math.max(...held.map(w => weaponMult(pr, w))) : +(1 + 0.01 * (S(THEME_STAT[cls]) - STAT_BASE)).toFixed(3); }
   }
+  for (const cls in THEMES) { const ml = pr.mast && pr.mast[cls] ? pr.mast[cls].lv : 1; s.tm[cls] = +(s.tm[cls] * (1 + MAST_PW * (ml - 1))).toFixed(3); } // mastery level: +1.5% power per level for that class's cards
   s.tm._atk = s.tm._blk = s.unarmed ? s.tm.martial : Math.max(...weps.map(w => weaponMult(pr, w))); // Strike / Defend
   s.cardLv = { ...(pr.cardLv || {}) };
   s.perkT = {}; s.perkG = {};
@@ -635,7 +636,7 @@ const reqFactor = (pr, g) => { if (!g.req) return 1; let f = 1; for (const k in 
 // a weapon's multiplier for its class cards and Strike/Defend
 const weaponMult = (pr, w) => +((1 + Object.entries(w.sc || {}).reduce((a, [k, g]) => a + GRADE[g] * (statOf(pr, k) - STAT_BASE), 0)) * reqFactor(pr, w)).toFixed(3);
 // mastery: playing a class's cards levels that class; each level = 1 point for card levels (Lv1-10) and perks
-const MAST_MAX = 30, mastNeed = lv => 10 + 6 * lv, LV_STEP = 0.12, LV_STEP2 = 0.06, CARD_LV_MAX = 10, CARD_LV_CUT = 5;
+const MAST_PW = 0.015, MAST_MAX = 30, mastNeed = lv => 10 + 6 * lv, LV_STEP = 0.12, LV_STEP2 = 0.06, CARD_LV_MAX = 10, CARD_LV_CUT = 5;
 // card power: +12% per level up to Lv5, +6% per level after; going from Lv5 on costs 2 points per level; Lv5 also makes the card 1⚡ cheaper
 const cardLvMul = lv => 1 + LV_STEP * (Math.min(lv, 5) - 1) + LV_STEP2 * Math.max(0, lv - 5);
 const cardLvCost = lv => lv >= 5 ? 2 : 1;
@@ -691,12 +692,36 @@ function cardFx(c, st) {
   if (!st) return d;
   const lv = (st.cardLv && st.cardLv[c.id]) || 1, pk = (d.tag && st.perkT && st.perkT[d.tag]) || {}, m = cardLvMul(lv);
   const e = { ...d, lv };
-  if (d.dmg) e.dmg = Math.round(d.dmg * m) + (pk.dmg || 0);
-  if (d.block) e.block = Math.round(d.block * m) + (pk.block || 0);
+  const up1 = v => lv > 1 ? Math.max(Math.round(v * m), v + 1) : v; // every level past 1 is felt: at least +1 on small numbers
+  if (d.dmg) e.dmg = up1(d.dmg) + (pk.dmg || 0);
+  if (d.block) e.block = up1(d.block) + (pk.block || 0);
   else if (pk.blockOnPlay) e.block = pk.blockOnPlay;
-  if (d.burn) e.burn = Math.round(d.burn * m) + (pk.burn || 0);
-  if (d.heal) e.heal = Math.round(d.heal * m) + (pk.heal || 0);
-  if (d.bpt) e.bpt = Math.round(d.bpt * m);
+  if (d.burn) e.burn = up1(d.burn) + (pk.burn || 0);
+  if (d.heal) e.heal = up1(d.heal) + (pk.heal || 0);
+  if (d.bpt) e.bpt = up1(d.bpt);
+  // the effects that are not plain numbers grow too, in steps, so no card is left unchanged by its level
+  if (lv > 1) {
+    const utilOnly = !(d.dmg || d.block || d.burn || d.heal || d.bpt), steps = (...th) => th.filter(t => lv >= t).length; // a card that is only utility gets its first step at Lv2, other cards later
+    if (d.draw) e.draw = d.draw + (utilOnly ? steps(2, 7) : steps(5, 10));
+    if (d.en) e.en = d.en + (utilOnly ? steps(2, 8) : steps(10));
+    if (d.dodge) e.dodge = d.dodge + (utilOnly ? steps(2, 7) : steps(5));
+    if (d.str) e.str = d.str + (utilOnly ? steps(2, 8) : steps(5, 10));
+    if (d.refresh) e.draw = (d.draw || 0) + steps(2, 6); // Tactical Shuffle: draws extra cards after the swap
+    if (d.vuln) e.vuln = d.vuln + (lv >= 4 ? 1 : 0) + (lv >= 8 ? 1 : 0);
+    if (d.weak) e.weak = d.weak + (lv >= 4 ? 1 : 0) + (lv >= 8 ? 1 : 0);
+    if (d.dpt) e.dpt = d.dpt + steps(2, 8);
+    if (d.handUp) e.handUp = d.handUp + (lv >= 10 ? 1 : 0);
+    if (d.hits > 1 && lv >= 10) e.hits = d.hits + 1;
+    if (d.lone) e.lone = +(d.lone * m).toFixed(3);
+    if (d.loneAll) e.loneAll = +(d.loneAll * m).toFixed(3);
+    if (d.combo) e.combo = Math.max(d.combo, Math.round(d.combo * m * 2) / 2);
+    if (d.grow) e.grow = Math.max(d.grow, Math.round(d.grow * m));
+    if (d.dumpDmg) e.dumpDmg = Math.round(d.dumpDmg * m);
+    if (d.onDisc) e.onDisc = { ...d.onDisc, ...(d.onDisc.dmg ? { dmg: Math.round(d.onDisc.dmg * m) } : {}), ...(d.onDisc.block ? { block: Math.round(d.onDisc.block * m) } : {}) };
+    if (d.slam) e.lvm = m;
+    if (d.hpCost && lv >= 5) e.hpCost = Math.max(0, d.hpCost - 1);
+    if (d.cost === 0 && lv >= CARD_LV_CUT && !d.dmg && !d.block && !d.draw && !d.en) e.draw = (e.draw || 0) + 1; // a free utility card has no cost to cut: it draws a card instead
+  }
   if (d.hits > 1 && pk.hit) e.hits = d.hits + pk.hit;
   if (pk.lone && d.lone) e.lone = d.lone + pk.lone;
   if (pk.vuln && d.type === "atk") e.vuln = (d.vuln || 0) + pk.vuln;
@@ -1429,7 +1454,8 @@ function normStat(q) {
 }
 function pvpClone(pr, mode) {
   if (mode === "A") return pr;
-  const q = { ...pr, lvl: NORM_LV, capStats: true }; // equal-stat duels keep the stat caps: the budget is the same, so the caps keep it fair
+  const q = { ...pr, lvl: NORM_LV, capStats: true };
+  if (mode === "B") q.mast = Object.fromEntries(Object.keys(THEMES).map(tg => [tg, { lv: 1, xp: 0, pts: 0 }])); // equal-stat duels keep the stat caps: the budget is the same, so the caps keep it fair
   if (mode === "B") { // only the weapons you hold (at base quality): no armor, accessories, passives, perks or card levels
     const hs = new Set(pr.hands.filter(Boolean));
     q.items = pr.items.map(it => hs.has(it.u) ? { ...it, r: 0, e: 0 } : it);
@@ -2033,7 +2059,7 @@ const blockAmt = (b, d) => Math.round(b * (1 + run.st.def) * (d ? tmul(d, "_blk"
 // damage of one hit of card d against foe f (before crits)
 function hitDmg(d, f, inHand) { // inHand: the card is still in the hand (a preview), so count its slot as empty
   const c = run.combat, s = run.st;
-  let base = (d.slam ? c.block : d.dmg) + (d.combo || 0) * (c.played || 0) + c.st.str + (pLv("keen") || 0) + (rl("r_whet") ? 2 : 0), mult = (1 + s.atk) * tmul(d, "_atk") * (1 + (d.mult || 0));
+  let base = (d.slam ? Math.round(c.block * (d.lvm || 1)) : d.dmg) + (d.combo || 0) * (c.played || 0) + c.st.str + (pLv("keen") || 0) + (rl("r_whet") ? 2 : 0), mult = (1 + s.atk) * tmul(d, "_atk") * (1 + (d.mult || 0));
   if (d.cost >= 2) mult *= 1 + s.heavy;
   mult *= 1 + (s.combo + (pLv("momentum") ? PF.momentum(pLv("momentum")) : 0)) * c.atks;
   if (pLv("laststand") && run.hp < run.maxHp * 0.3) mult *= 1 + PF.laststand(pLv("laststand"));
@@ -2990,7 +3016,7 @@ function renderTree() {
     `<div class="tabs" style="margin-top:10px">${tabs}</div>` +
     `<div class="sec" style="max-width:760px"><h3>${THEMES[treeTag].ic} ${tr(THEMES[treeTag].n)} · Lv ${m.lv}${max ? " MAX" : ""} · ${L("แต้ม", "Points")} <span style="color:var(--gold)">⭐ ${m.pts}</span></h3>` +
     `<div class="bar xpbar"><i style="width:${max ? 100 : Math.min(100, m.xp / need * 100)}%"></i><span>${max ? "MAX" : `${m.xp} / ${need} XP`}</span></div>` +
-    `<div class="sub" style="margin:6px 0 0">${L(`ได้ XP เมื่อเล่นการ์ดแนวนี้ใน run (1 ใบ = 1 XP) · เลเวลละ 1 แต้ม · การ์ดคลาสนี้สเกลกับ ${THEME_STAT[treeTag] ? THEME_STAT[treeTag].toUpperCase() : "stat สูงสุด"} (ตอนนี้ ×${st.tm[treeTag]})`, `Gain XP by playing this class's cards in runs (1 card = 1 XP) · 1 point per level · these cards scale with ${THEME_STAT[treeTag] ? THEME_STAT[treeTag].toUpperCase() : "your top stat"} (now ×${st.tm[treeTag]})`)}</div>` +
+    `<div class="sub" style="margin:6px 0 0">${L(`ได้ XP เมื่อเล่นการ์ดแนวนี้ใน run (1 ใบ = 1 XP) · เลเวลละ 1 แต้ม · การ์ดคลาสนี้สเกลกับ ${THEME_STAT[treeTag] ? THEME_STAT[treeTag].toUpperCase() : "stat สูงสุด"} (ตอนนี้ ×${st.tm[treeTag]}) · ⭐ เลเวลความชำนาญเพิ่มพลังการ์ดคลาสนี้ +${+(MAST_PW * 100).toFixed(1)}% ต่อเลเวล (ตอนนี้ +${+(MAST_PW * 100 * (m.lv - 1)).toFixed(1)}%)`, `Gain XP by playing this class's cards in runs (1 card = 1 XP) · 1 point per level · these cards scale with ${THEME_STAT[treeTag] ? THEME_STAT[treeTag].toUpperCase() : "your top stat"} (now ×${st.tm[treeTag]}) · ⭐ each mastery level adds +${+(MAST_PW * 100).toFixed(1)}% power to this class's cards (now +${+(MAST_PW * 100 * (m.lv - 1)).toFixed(1)}%)`)}</div>` +
     (treeNote ? `<div id="rollResult">${treeNote}</div>` : "") + `</div>` +
     `<div class="treecols"><div>` + sec(L("✨ Perk ของแนว", "✨ Theme perks"), perks) + `</div>` +
     `<div class="sec treecards"><h3>🃏 ${L("เลเวลการ์ด (ถาวร ทุกใบในทุก run) · Lv2–5 เลเวลละ +12% · Lv5 ลด 1 ⚡ · Lv6–10 เลเวลละ +6% (ใช้ ⭐2)", "Card levels (permanent, every copy in every run) · Lv2–5 +12% per level · Lv5 costs 1 ⚡ less · Lv6–10 +6% per level (⭐2 each)")}</h3><div class="cardrow mini">${cards}</div></div></div>` +
