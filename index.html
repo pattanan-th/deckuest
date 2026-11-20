@@ -852,6 +852,15 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
 .bkcard small { color: var(--dim); line-height: 1.3; }
 .bkadv { margin-top: 6px; text-align: left; }
 .bkadv summary { cursor: pointer; color: var(--dim); text-align: center; }
+
+/* mastery screen: padding slots keep every class's window the same size */
+.padslot { visibility: hidden; pointer-events: none; }
+.tcard.padslot .hc { border-color: transparent; background: none; }
+/* the same card size in every class window (text is clipped by the fixed height; wide screens use their own, taller sizes) */
+.treecards .cardrow.mini .hc { height: 172px; min-height: 172px; }
+@media (min-width: 1000px) and (min-height: 640px) { .treecards .cardrow.mini .hc { height: 172px; min-height: 172px; } }
+.treecards .tcard { height: 262px; justify-content: flex-start; }
+.treecards .tcard .price { min-height: 30px; display: flex; align-items: center; }
 </style>
 </head>
 <body>
@@ -1205,7 +1214,7 @@ function rerender() {
 }
 
 // version shown small on the home / profile screens and in the pause menu; bump it with every release
-const GAME_VER = "1.3.0";
+const GAME_VER = "1.3.1";
 
 // ================= cards =================
 // type: atk (attack) | skl (skill) | pow (power: stays in play for the fight). r: 0 starter/weapon, 1 common, 2 uncommon, 3 rare.
@@ -3850,13 +3859,14 @@ function renderTree() {
     const right = has ? `<span class="price ok">✔ ${L("เรียนแล้ว", "Learned")}</span>` : lock ? `<span class="price">🔒 Lv${pk.lv}</span>`
       : `<button class="mergeBtn" data-perk="${pk.id}" style="--rc:var(--gold)"${m.pts >= pk.cost ? "" : " disabled"}>${L("เรียน", "Learn")} · ⭐${pk.cost}</button>`;
     return `<div class="item${has ? " sel" : ""}${lock ? " no" : ""}"><span class="ic">${pk.ic}</span><div class="info"><b>${tr(pk.t)}</b> <small>Mastery Lv${pk.lv}</small><div class="d">${tr(pk.d)}</div></div>${right}</div>`;
-  }).join("");
+  }).join("") + `<div class="item padslot" aria-hidden="true"><span class="ic">·</span><div class="info"><b>·</b><div class="d">·</div></div></div>`.repeat(Math.max(0, Math.max(...Object.values(PERKS).map(a => a.length)) - PERKS[treeTag].length));
+  const maxCards = Math.max(...Object.keys(THEMES).map(tg => themeCards(tg).length));
   const cards = themeCards(treeTag).map(id => {
     const lv = pr.cardLv[id] || 1, top = lv >= CARD_LV_MAX;
     return `<div class="tcard">${cardHtml({ id, up: 0 }, { st })}` +
       (top ? `<span class="price">MAX</span>` : `<button class="mergeBtn" data-clv="${id}" style="--rc:var(--gold)"${m.pts ? "" : " disabled"}>⬆ Lv${lv + 1}${lv + 1 === CARD_LV_MAX ? " · −1⚡" : ""} · ⭐1</button>`) +
       (CARDS[id].only ? `<small class="sub">${L("การ์ดพิเศษของแนว", "theme-only")}</small>` : "") + `</div>`;
-  }).join("");
+  }).join("") + `<div class="tcard padslot" aria-hidden="true"><div class="hc"></div><span class="price">·</span></div>`.repeat(maxCards - themeCards(treeTag).length); // every class gets the same window size
   $("treeBody").innerHTML = `<div style="font-size:44px">🌳</div><div class="big">${L("ความชำนาญอาวุธ", "Weapon Mastery")}</div>` +
     `<div class="tabs" style="margin-top:10px">${tabs}</div>` +
     `<div class="sec" style="max-width:760px"><h3>${THEMES[treeTag].ic} ${tr(THEMES[treeTag].n)} · Lv ${m.lv}${max ? " MAX" : ""} · ${L("แต้ม", "Points")} <span style="color:var(--gold)">⭐ ${m.pts}</span></h3>` +

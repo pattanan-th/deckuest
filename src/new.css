@@ -467,3 +467,12 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
 .bkcard small { color: var(--dim); line-height: 1.3; }
 .bkadv { margin-top: 6px; text-align: left; }
 .bkadv summary { cursor: pointer; color: var(--dim); text-align: center; }
+
+/* mastery screen: padding slots keep every class's window the same size */
+.padslot { visibility: hidden; pointer-events: none; }
+.tcard.padslot .hc { border-color: transparent; background: none; }
+/* the same card size in every class window (text is clipped by the fixed height; wide screens use their own, taller sizes) */
+.treecards .cardrow.mini .hc { height: 172px; min-height: 172px; }
+@media (min-width: 1000px) and (min-height: 640px) { .treecards .cardrow.mini .hc { height: 172px; min-height: 172px; } }
+.treecards .tcard { height: 262px; justify-content: flex-start; }
+.treecards .tcard .price { min-height: 30px; display: flex; align-items: center; }
