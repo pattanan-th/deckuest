@@ -1292,7 +1292,7 @@ function rerender() {
 }
 
 // version shown small on the home / profile screens and in the pause menu; bump it with every release
-const GAME_VER = "1.10.0";
+const GAME_VER = "1.11.0";
 
 // ================= cards =================
 // type: atk (attack) | skl (skill) | pow (power: stays in play for the fight). r: 0 starter/weapon, 1 common, 2 uncommon, 3 rare.
@@ -1800,12 +1800,12 @@ function statsOf(pr) {
   }
   // each stat's own effect (tuned to about +1% power per point)
   s.atk += SX.str * (S("str") - STAT_BASE);
-  s.crit += Math.min(0.6, 0.01 * (S("dex") - STAT_BASE));
-  s.enChance = +Math.min(SX.intCap, SX.int * (S("int") - STAT_BASE)).toFixed(3);
+  s.crit += 0.01 * (S("dex") - STAT_BASE); // no cap on the stat; in a fight crit still tops out at 90%
+  s.enChance = +(SX.int * (S("int") - STAT_BASE)).toFixed(3); // every full 100% is a guaranteed +1⚡
   s.killHeal += 0.005 * (S("fai") - STAT_BASE);
   s.regen = Math.floor((S("fai") - STAT_BASE) / SX.faiRegen);
   s.hp *= 1 + SX.vit * (S("vit") - STAT_BASE);
-  s.dodge = +Math.min(SX.agiCap, SX.agi * (S("agi") - STAT_BASE)).toFixed(3);
+  s.dodge = +(SX.agi * (S("agi") - STAT_BASE)).toFixed(3); // no cap on the stat; in a fight dodge tops out at 90%
   // class card power: the best held weapon of that class (its scaling grades x requirement), otherwise a little from the class stat
   const weps = hands.filter(v => isWeaponId(v.id)), top = Math.max(...STATS.map(sd => S(sd.id)));
   s.unarmed = !weps.length;
@@ -1838,14 +1838,14 @@ function statsOf(pr) {
 
 // ================= character level, stats and theme mastery (permanent) =================
 // what one point of each stat gives on top of weapon scaling (tuned so a focused stat is worth about the same in every class)
-const SX = { str: 0.005, vit: 0.01, int: 0.02, intCap: 0.6, agi: 0.01, agiCap: 0.2, faiRegen: 6 };
+const SX = { str: 0.005, vit: 0.01, int: 0.02, agi: 0.01, faiRegen: 6 };
 const STATS = [
   { id: "str", ic: "💪", n: "STR", d: ["ดาเมจทุกการ์ด +0.5% · อาวุธ Berserker", "All damage +0.5% · Berserker weapons"] },
-  { id: "dex", ic: "🎯", n: "DEX", d: ["Crit +1% (สูงสุด 60%) · อาวุธ Duelist", "Crit +1% (max 60%) · Duelist weapons"] },
-  { id: "int", ic: "🔮", n: "INT", d: ["โอกาส +1⚡ ต้นเทิร์น +2% (สูงสุด 60%) · อาวุธ Sorcerer", "+2% chance of +1⚡ each turn (max 60%) · Sorcerer weapons"] },
+  { id: "dex", ic: "🎯", n: "DEX", d: ["Crit +1% (ไม่จำกัด · ในไฟต์สูงสุด 90%) · อาวุธ Duelist", "Crit +1% (no cap · 90% in a fight) · Duelist weapons"] },
+  { id: "int", ic: "🔮", n: "INT", d: ["โอกาส +1⚡ ต้นเทิร์น +2% (ไม่จำกัด · ครบ 100% = ได้ +1⚡ ทุกเทิร์น) · อาวุธ Sorcerer", "+2% chance of +1⚡ each turn (no cap · every 100% = a sure +1⚡) · Sorcerer weapons"] },
   { id: "fai", ic: "✨", n: "FAI", d: ["ชนะไฟต์ฟื้น HP +0.5% · ทุก 6 แต้ม ฟื้น 1 HP ต้นเทิร์น · อาวุธ Cleric", "+0.5% HP healed per win · every 6 points heal 1 HP each turn · Cleric weapons"] },
   { id: "vit", ic: "❤️", n: "VIT", d: ["Max HP +1% · อาวุธ Guardian", "Max HP +1% · Guardian weapons"] },
-  { id: "agi", ic: "🌬️", n: "AGI", d: ["หลบการโจมตี +1% (สูงสุด 20%) · อาวุธ Ranger", "Dodge +1% (max 20%) · Ranger weapons"] },
+  { id: "agi", ic: "🌬️", n: "AGI", d: ["หลบการโจมตี +1% (ไม่จำกัด · ในไฟต์สูงสุด 90%) · อาวุธ Ranger", "Dodge +1% (no cap · 90% in a fight) · Ranger weapons"] },
 ];
 const STAT_BASE = 5, STAT_STEP = 0.03, PTS_PER_LV = 4, LV_MAX = 60, REQ_FLOOR = 0.4;
 const THEME_STAT = { berserker: "str", duelist: "dex", sorcerer: "int", cleric: "fai", guardian: "vit", ranger: "agi", gambler: "dex", martial: null };
@@ -1853,8 +1853,8 @@ const GRADE = { S: 0.05, A: 0.04, B: 0.03, C: 0.02, D: 0.01 }; // power per stat
 // what a stat value gives (its own effect only)
 const statFx = (id, v) => {
   const x = v - STAT_BASE;
-  return id === "str" ? L(`ดาเมจ +${+(SX.str * 100 * x).toFixed(1)}%`, `damage +${+(SX.str * 100 * x).toFixed(1)}%`) : id === "dex" ? `Crit +${Math.min(60, x)}%` : id === "int" ? `+1⚡ ${+Math.min(SX.intCap * 100, SX.int * 100 * x).toFixed(1)}%`
-    : id === "fai" ? L(`ชนะฟื้น ${+(0.5 * x).toFixed(1)}%`, `win heal ${+(0.5 * x).toFixed(1)}%`) + (Math.floor(x / SX.faiRegen) > 0 ? ` · 💚${Math.floor(x / SX.faiRegen)}/${L("เทิร์น", "turn")}` : "") : id === "vit" ? `HP +${+(SX.vit * 100 * x).toFixed(1)}%` : L(`หลบ ${+Math.min(SX.agiCap * 100, SX.agi * 100 * x).toFixed(1)}%`, `dodge ${+Math.min(SX.agiCap * 100, SX.agi * 100 * x).toFixed(1)}%`);
+  return id === "str" ? L(`ดาเมจ +${+(SX.str * 100 * x).toFixed(1)}%`, `damage +${+(SX.str * 100 * x).toFixed(1)}%`) : id === "dex" ? `Crit +${x}%` : id === "int" ? `+1⚡ ${+(SX.int * 100 * x).toFixed(1)}%`
+    : id === "fai" ? L(`ชนะฟื้น ${+(0.5 * x).toFixed(1)}%`, `win heal ${+(0.5 * x).toFixed(1)}%`) + (Math.floor(x / SX.faiRegen) > 0 ? ` · 💚${Math.floor(x / SX.faiRegen)}/${L("เทิร์น", "turn")}` : "") : id === "vit" ? `HP +${+(SX.vit * 100 * x).toFixed(1)}%` : L(`หลบ ${+(SX.agi * 100 * x).toFixed(1)}%`, `dodge ${+(SX.agi * 100 * x).toFixed(1)}%`);
 };
 const charNeed = lv => Math.round(30 * Math.pow(lv, 1.5));
 const statOf = (pr, k) => (pr.stat && pr.stat[k]) || STAT_BASE;
@@ -2757,7 +2757,7 @@ async function pvpGotTurn(m) {
     await wait(320);
     if (!run || run.combat !== c || pv.phase !== "duel") return;
     if (c.st.dodge > 0) { c.st.dodge--; floatAt($("pava"), "🌬️ " + L("หลบ!", "Dodge!"), "blk"); renderCombat(); continue; }
-    if (Math.random() < (run.st.dodge || 0)) { floatAt($("pava"), "💨 Miss", "blk"); continue; }
+    if (Math.random() < Math.min(0.9, run.st.dodge || 0)) { floatAt($("pava"), "💨 Miss", "blk"); continue; }
     hurtPlayer(h); renderCombat();
     if (run.hp <= 0) break;
   }
@@ -3241,7 +3241,7 @@ function startTurn(first) {
   }
   if (run.st.regen > 0 && run.hp < run.maxHp) { const h = Math.min(run.st.regen, run.maxHp - run.hp); run.hp += h; floatAt($("pava"), "💚+" + h, "heal"); }
   if (rl("r_crown")) { hurtPlayer(2, true); if (run.hp <= 0) return loseFight(); }
-  c.en = BASE_EN + (c.enMod || 0) + (rl("r_crown") ? 1 : 0) + (c.turn === 1 ? (c.en1 || 0) + (rl("r_battery") ? 1 : 0) - (rl("c_slow") ? 1 : 0) : 0) + (pLv("overflow") && Math.random() < PF.overflow(pLv("overflow")) ? 1 : 0) + (c.turn === 1 ? PG().enFirst || 0 : 0) + (Math.random() < (run.st.enChance || 0) ? 1 : 0);
+  c.en = BASE_EN + (c.enMod || 0) + (rl("r_crown") ? 1 : 0) + (c.turn === 1 ? (c.en1 || 0) + (rl("r_battery") ? 1 : 0) - (rl("c_slow") ? 1 : 0) : 0) + (pLv("overflow") && Math.random() < PF.overflow(pLv("overflow")) ? 1 : 0) + (c.turn === 1 ? PG().enFirst || 0 : 0) + (Math.floor(run.st.enChance || 0) + (Math.random() < ((run.st.enChance || 0) % 1) ? 1 : 0));
   c.en = Math.max(0, c.en);
   let n = Math.max(0, handLim() - c.hand.length) + (c.dpt || 0);
   if (c.turn === 1) n += run.st.drawFirst + (pLv("quick") ? 1 : 0) + (c.draw1 || 0) + (rl("r_boots") ? 2 : 0);
@@ -3429,7 +3429,7 @@ async function foePhase(c) {
       animFoe(f, "lunge");
       for (let h = 0; h < (m.h || 1); h++) {
         if (c.st.dodge > 0) { c.st.dodge--; floatAt($("pava"), "🌬️ " + L("หลบ!", "Dodge!"), "blk"); continue; }
-        if (Math.random() < (run.st.dodge || 0)) { floatAt($("pava"), "💨 Miss", "blk"); continue; }
+        if (Math.random() < Math.min(0.9, run.st.dodge || 0)) { floatAt($("pava"), "💨 Miss", "blk"); continue; }
         hurtPlayer(foeHit(f, m));
         if (pLv("thorns") && !f.dead) damageFoe(f, PF.thorns(pLv("thorns")), false);
         if (rl("r_mirror") && !f.dead) damageFoe(f, 3, false);
