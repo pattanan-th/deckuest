@@ -62,7 +62,7 @@ function rerender() {
 }
 
 // version shown small on the home / profile screens and in the pause menu; bump it with every release
-const GAME_VER = "1.12.0";
+const GAME_VER = "1.12.1";
 
 // ================= cards =================
 // type: atk (attack) | skl (skill) | pow (power: stays in play for the fight). r: 0 starter/weapon, 1 common, 2 uncommon, 3 rare.
@@ -2940,7 +2940,7 @@ function renderInv() {
         return `<span class="${!n || v >= n ? "reqok" : "reqbad"}">${g.ic} ${g.t}${n ? ` ${n}${v >= n ? "✔" : "✖"}` : ""}${g.sc && g.sc[sd.id] ? ` <b class="grade g${g.sc[sd.id]}">${g.sc[sd.id]}</b>` : ""}</span>`;
       }).join(" · ");
       const bad = [...handViews(pr), armorView(pr), ...accOf(pr)].filter(g => g.req && g.req[sd.id] && v < g.req[sd.id]).map(g => `<span class="reqbad">${g.ic} ${g.t} ${L("ต้อง", "needs")} ${g.req[sd.id]} ✖</span>`).join(" · ");
-      return `<div class="item statrow"><span class="ic">${sd.ic}</span><div class="info"><b>${sd.n} ${v}</b> <small class="sfx">${L("ตอนนี้", "now")} ${v > STAT_BASE ? statFx(sd.id, v) : "–"} → <b>+1</b> ${statFx(sd.id, v + 1)}</small>` +
+      return `<div class="item statrow"><span class="ic">${sd.ic}</span><div class="info"><b>${sd.n} ${v}</b> <small class="sfx">${sd.id === "vit" ? `${L("เลือดสูงสุด", "Max HP")} ${s.hp} → <b>${statsOf({ ...pr, stat: { ...pr.stat, vit: v + 1 } }).hp}</b> <small>(+${statsOf({ ...pr, stat: { ...pr.stat, vit: v + 1 } }).hp - s.hp})</small>` : `${L("ตอนนี้", "now")} ${v > STAT_BASE ? statFx(sd.id, v) : "–"} → <b>+1</b> ${statFx(sd.id, v + 1)}`}</small>` +
         `<div class="d">${tr(sd.d)}</div>${bad ? `<div class="d">${bad}</div>` : ""}</div>` +
       `<button class="mergeBtn" data-stat="${sd.id}" style="--rc:var(--gold)"${pr.pts ? "" : " disabled"}>+1</button>${pr.pts >= 5 ? `<button class="mergeBtn" data-stat="${sd.id}|5" style="--rc:var(--gold)">+5</button>` : ""}</div>`;
     }).join("") +
