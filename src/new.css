@@ -569,8 +569,8 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
 .treecards .tcard.padslot .hc { border: 0; background: none; }
 #tree .shop .item { min-height: 92px; align-items: center; }
 #tree .treecols > div .sec h3 { margin-bottom: 8px; }
-#tree .shop { grid-auto-rows: 124px; }
-#tree .shop .item { height: 124px; min-height: 0; overflow: hidden; }
+#tree .shop { grid-auto-rows: 134px; }
+#tree .shop .item { height: 134px; min-height: 0; overflow: hidden; }
 @media (max-width: 560px) {
   .treecards .cardrow.mini { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 10px; }
   .treecards .cardrow.mini .hc { height: 236px; min-height: 236px; }

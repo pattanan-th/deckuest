@@ -62,7 +62,7 @@ function rerender() {
 }
 
 // version shown small on the home / profile screens and in the pause menu; bump it with every release
-const GAME_VER = "1.13.5";
+const GAME_VER = "1.14.0";
 
 // ================= cards =================
 // type: atk (attack) | skl (skill) | pow (power: stays in play for the fight). r: 0 starter/weapon, 1 common, 2 uncommon, 3 rare.
@@ -646,36 +646,57 @@ const PERKS = {
     { id: "brs1", lv: 2, cost: 2, ic: "🪨", t: ["แขนเหล็ก", "Iron Arms"], d: ["การ์ด Berserker ดาเมจ +4", "Berserker cards +4 damage"], card: { dmg: 4 } },
     { id: "brs2", lv: 5, cost: 2, ic: "💢", t: ["ทุบแตก", "Shatter"], d: ["การ์ดโจมตี Berserker ติด Vulnerable +1", "Berserker attacks apply +1 Vulnerable"], card: { vuln: 1 } },
     { id: "brs3", lv: 8, cost: 3, ic: "🌋", t: ["พลังทำลาย", "Devastate"], d: ["การ์ด Berserker ดาเมจ +25%", "Berserker cards +25% damage"], card: { mult: 0.25 } },
+    { id: "brs4", lv: 12, cost: 3, ic: "🩸", t: ["กระหายเลือด", "Bloodlust"], d: ["ล้มศัตรูได้ +1 ⚡", "Defeating an enemy gives +1 ⚡"], g: { killEn: 1 } },
+    { id: "brs5", lv: 20, cost: 4, ic: "😡", t: ["โทสะคลั่ง", "Fury"], d: ["เริ่มทุกไฟต์ด้วย Strength +2", "Start every fight with +2 Strength"], g: { startStr: 2 } },
+    { id: "brs6", lv: 28, cost: 5, ic: "👑", t: ["จอมสงคราม", "Warlord"], d: ["การ์ดที่ใช้ 2⚡ ขึ้นไป ดาเมจ +35%", "Cards costing 2+ ⚡ deal +35% damage"], g: { heavyX: 0.35 } },
   ],
   duelist: [
     { id: "dlt1", lv: 2, cost: 2, ic: "🎯", t: ["คมดาบ", "Keen Edges"], d: ["การ์ด Duelist Crit +8%", "Duelist cards +8% crit"], card: { crit: 0.08 } },
     { id: "dlt2", lv: 5, cost: 2, ic: "🗡️", t: ["ฟันซ้ำ", "Follow-up"], d: ["การ์ด Duelist ดาเมจ +2 ต่อครั้ง", "Duelist cards +2 damage per hit"], card: { dmg: 2 } },
     { id: "dlt3", lv: 8, cost: 3, ic: "🔁", t: ["เสียงสะท้อนคู่", "Twin Echo"], d: ["การ์ดโจมตี Duelist มีโอกาส 15% ตีซ้ำอีกครั้ง", "Duelist attacks have a 15% chance to hit once more"], card: { echo: 0.15 } },
+    { id: "dlt4", lv: 12, cost: 3, ic: "⚡", t: ["ชักไว", "Quick Draw"], d: ["การ์ด 0⚡ ใบแรกของเทิร์น จั่ว +1", "Your first 0⚡ card each turn draws 1"], g: { freeDraw: 1 } },
+    { id: "dlt5", lv: 20, cost: 4, ic: "🎯", t: ["จังหวะวิกฤต", "Critical Flow"], d: ["Crit ครั้งแรกของเทิร์น จั่ว +1", "Your first crit each turn draws a card"], g: { critDraw: 1 } },
+    { id: "dlt6", lv: 28, cost: 5, ic: "🌪️", t: ["พายุใบมีด", "Blade Storm"], d: ["การ์ด Duelist ที่ตีหลายครั้ง ตีเพิ่ม 1 ครั้ง และดาเมจ +1", "Multi-hit Duelist cards hit once more, +1 damage"], card: { hit: 1, dmg: 1 } },
   ],
   sorcerer: [
     { id: "sor1", lv: 2, cost: 2, ic: "🪵", t: ["เชื้อเพลิง", "Kindling"], d: ["การ์ด Sorcerer Burn +2", "Sorcerer cards +2 Burn"], card: { burn: 2 } },
     { id: "sor2", lv: 5, cost: 2, ic: "📖", t: ["เตรียมคาถา", "Prepared"], d: ["เทิร์นแรกจั่ว +1", "Turn 1: draw +1"], g: { drawFirst: 1 } },
     { id: "sor3", lv: 8, cost: 3, ic: "⚡", t: ["ล้นมานา", "Mana Font"], d: ["เทิร์นแรก +1 ⚡", "Turn 1: +1 ⚡"], g: { enFirst: 1 } },
+    { id: "sor4", lv: 12, cost: 3, ic: "🔥", t: ["เพลิงลามทุ่ง", "Spreading Flames"], d: ["Burn ที่ติดศัตรูตัวเดียว ลามครึ่งหนึ่งไปตัวอื่น", "Burn on a single target spreads half to the other enemies"], g: { burnSpread: 1 } },
+    { id: "sor5", lv: 20, cost: 4, ic: "🧠", t: ["จิตว่างเปล่า", "Deep Focus"], d: ["ทุกเทิร์นจั่ว +1", "Draw +1 every turn"], g: { drawTurn: 1 } },
+    { id: "sor6", lv: 28, cost: 5, ic: "🌋", t: ["หัวใจเพลิง", "Inferno Heart"], d: ["Burn ทำดาเมจเพิ่ม +3 ทุกครั้งที่ติด", "Burn deals +3 extra damage each tick"], g: { burnTick: 3 } },
   ],
   cleric: [
     { id: "clr1", lv: 2, cost: 2, ic: "💚", t: ["พรศักดิ์สิทธิ์", "Blessed"], d: ["การ์ด Cleric ฟื้น HP +2", "Cleric cards heal +2"], card: { heal: 2 } },
     { id: "clr2", lv: 5, cost: 2, ic: "🙏", t: ["สวดขอบคุณ", "Thanksgiving"], d: ["ชนะไฟต์ฟื้น +5 HP", "Heal 5 HP after each win"], g: { winHeal: 5 } },
     { id: "clr3", lv: 8, cost: 3, ic: "🌟", t: ["รัศมีคุ้มครอง", "Halo"], d: ["ฟื้น HP เกินหลอด กลายเป็น Block", "Overhealing turns into Block"], g: { healToBlock: 1 } },
+    { id: "clr4", lv: 12, cost: 3, ic: "🌅", t: ["แสงอรุณ", "Morning Light"], d: ["ต้นเทิร์นฟื้น 3 HP", "Heal 3 HP at the start of every turn"], g: { regenTurn: 3 } },
+    { id: "clr5", lv: 20, cost: 4, ic: "⚡", t: ["พิโรธศักดิ์สิทธิ์", "Holy Wrath"], d: ["ฟื้นเกินเลือดเต็ม กลายเป็นดาเมจใส่ศัตรูสุ่ม", "Overhealing becomes damage to a random enemy"], g: { healToDmg: 1 } },
+    { id: "clr6", lv: 28, cost: 5, ic: "👼", t: ["โอกาสที่สอง", "Second Chance"], d: ["ไฟต์ละครั้ง: ถ้า HP หมด กลับมา 30% HP", "Once per fight: when HP hits 0, return with 30% HP"], g: { ward: 1 } },
   ],
   guardian: [
     { id: "grd1", lv: 2, cost: 2, ic: "🧱", t: ["ตั้งการ์ด", "Guard Up"], d: ["เริ่มไฟต์ Block +5", "Start fights with +5 Block"], g: { startBlock: 5 } },
     { id: "grd2", lv: 5, cost: 2, ic: "🛡️", t: ["โล่หนา", "Thick Shield"], d: ["การ์ด Guardian Block +3", "Guardian cards +3 Block"], card: { block: 3 } },
     { id: "grd3", lv: 8, cost: 3, ic: "🏰", t: ["ป้อมปราการ", "Fortress"], d: ["Block ที่เหลือเก็บไว้ครึ่งหนึ่งข้ามเทิร์น", "Keep half your Block between turns"], g: { keepBlock: 1 } },
+    { id: "grd4", lv: 12, cost: 3, ic: "🌵", t: ["เกราะหนาม", "Spiked Armor"], d: ["เมื่อ Block รับดาเมจได้ ศัตรูโดนสะท้อน 4", "When Block absorbs a hit, the attacker takes 4"], g: { blockThorns: 4 } },
+    { id: "grd5", lv: 20, cost: 4, ic: "🪨", t: ["ผิวเหล็ก", "Iron Skin"], d: ["Block จากการ์ดทุกใบ +25%", "All Block you gain is +25%"], g: { defX: 0.25 } },
+    { id: "grd6", lv: 28, cost: 5, ic: "🏛️", t: ["ไม่ทลาย", "Unbreakable"], d: ["Block ไม่หายข้ามเทิร์น", "Block never fades between turns"], g: { keepAll: 1 } },
   ],
   ranger: [
     { id: "rng1", lv: 2, cost: 2, ic: "🍃", t: ["เท้าเบา", "Light Feet"], d: ["เริ่มไฟต์ด้วยหลบ 1", "Start fights with 1 Dodge"], g: { startDodge: 1 } },
     { id: "rng2", lv: 5, cost: 2, ic: "🎯", t: ["ตราล่า", "Hunter's Mark"], d: ["การ์ดโจมตี Ranger ติด Vulnerable +1", "Ranger attacks apply +1 Vulnerable"], card: { vuln: 1 } },
     { id: "rng3", lv: 8, cost: 3, ic: "🏹", t: ["นักแม่นธนู", "Marksman"], d: ["การ์ด Ranger ดาเมจ +3", "Ranger cards +3 damage"], card: { dmg: 3 } },
+    { id: "rng4", lv: 12, cost: 3, ic: "🌀", t: ["หลบแล้วโต้กลับ", "Riposte Step"], d: ["หลบการโจมตีได้ ศัตรูที่โจมตีโดนสวน 6 ดาเมจ", "Dodging an attack counters the attacker for 6 damage"], g: { dodgeCounter: 6 } },
+    { id: "rng5", lv: 20, cost: 4, ic: "👁️", t: ["ตาเหยี่ยว", "Hunter's Eye"], d: ["ศัตรูที่ติด Vulnerable เจ็บเพิ่มอีก +25%", "Vulnerable enemies take another +25%"], g: { vulnX: 0.25 } },
+    { id: "rng6", lv: 28, cost: 5, ic: "🏹", t: ["เล็งสมบูรณ์", "Perfect Aim"], d: ["การ์ด Ranger Crit +20%", "Ranger cards +20% crit"], card: { crit: 0.2 } },
   ],
   gambler: [
     { id: "gmb1", lv: 2, cost: 2, ic: "🎲", t: ["ลูกเต๋าถ่วง", "Weighted Dice"], d: ["การ์ด Gambler โบนัสไพ่น้อย +5% ต่อช่อง", "Gambler cards +5% per empty slot"], card: { lone: 0.05 } },
     { id: "gmb2", lv: 5, cost: 2, ic: "💰", t: ["กินเรียบ", "Cash In"], d: ["การ์ด Gambler ดาเมจ +3", "Gambler cards +3 damage"], card: { dmg: 3 } },
     { id: "gmb3", lv: 8, cost: 3, ic: "🏦", t: ["เจ้ามือ", "The House"], d: ["การ์ดโจมตีทุกใบได้โบนัสไพ่น้อย +5% ต่อช่อง", "All attacks get +5% per empty hand slot"], g: { loneAll: 0.05 } },
+    { id: "gmb4", lv: 12, cost: 3, ic: "🪙", t: ["กองชิป", "Chip Stack"], d: ["ทุกใบที่ทิ้งจากมือ ได้ Block 2", "Each card discarded from hand gives 2 Block"], g: { discBlock: 2 } },
+    { id: "gmb5", lv: 20, cost: 4, ic: "🔥", t: ["ไพ่ร้อนแรง", "Hot Streak"], d: ["การ์ด Gambler โบนัสไพ่น้อย +10% ต่อช่อง", "Gambler cards +10% per empty hand slot"], card: { lone: 0.1 } },
+    { id: "gmb6", lv: 28, cost: 5, ic: "🎰", t: ["เจ้ามือไม่เคยแพ้", "The House Always Wins"], d: ["การ์ดโจมตีทุกใบ โบนัสไพ่น้อย +10% ต่อช่อง", "All attacks get +10% per empty hand slot"], g: { loneAll: 0.1 } },
   ],
   martial: [
     { id: "mrt1", lv: 2, cost: 2, ic: "👊", t: ["หมัดเหล็ก", "Iron Fist"], d: ["การ์ดมือเปล่า ดาเมจ +2", "Martial cards +2 damage"], card: { dmg: 2 } },
@@ -683,6 +704,9 @@ const PERKS = {
     { id: "mrt3", lv: 6, cost: 2, ic: "💨", t: ["หลบหลีก", "Evasion"], d: ["เริ่มไฟต์ด้วยหลบ 1", "Start fights with 1 Dodge"], g: { startDodge: 1 } },
     { id: "mrt4", lv: 8, cost: 3, ic: "⚡", t: ["ลมปราณ", "Ki Surge"], d: ["เทิร์นแรก +1 ⚡", "Turn 1: +1 ⚡"], g: { enFirst: 1 } },
     { id: "mrt5", lv: 10, cost: 3, ic: "🤜", t: ["พันฝ่ามือ", "Thousand Palms"], d: ["การ์ดมือเปล่าที่ตีหลายครั้ง ตีเพิ่ม 1 ครั้ง", "Multi-hit martial cards hit 1 more time"], card: { hit: 1 } },
+    { id: "mrt6", lv: 12, cost: 3, ic: "🌀", t: ["ท่วงทำนองต่อเนื่อง", "Endless Combo"], d: ["การ์ดโจมตีมือเปล่า Combo +1 อีก", "Martial attacks get +1 more combo"], card: { combo: 1 } },
+    { id: "mrt7", lv: 20, cost: 4, ic: "🧘", t: ["จิตใส", "Clear Mind"], d: ["ทุกเทิร์นจั่ว +1", "Draw +1 every turn"], g: { drawTurn: 1 } },
+    { id: "mrt8", lv: 28, cost: 5, ic: "🛡️", t: ["กายาเหล็ก", "Iron Body"], d: ["Block จากการ์ดทุกใบ +20% และเริ่มไฟต์ด้วย Block 10", "All Block +20% and start fights with 10 Block"], g: { defX: 0.2, startBlock: 10 } },
   ],
 };
 const themeCards = tag => Object.keys(CARDS).filter(id => CARDS[id].tag === tag).sort((a, b) => CARDS[a].r - CARDS[b].r || (CARDS[a].only || 0) - (CARDS[b].only || 0));
@@ -2023,6 +2047,7 @@ function startCombat(kind) {
   const draw = shuffle(run.deck.map(c => ({ ...c })));
   run.combat = { kind, foes, draw, hand: [], disc: [], exh: [], en: 0, turn: 0, block: run.st.startBlock + (pLv("fortify") ? PF.fortify(pLv("fortify")) : 0), st: { str: 0, weak: 0, vuln: 0, burn: 0, dodge: PG().startDodge || 0 }, bpt: 0, dpt: 0, atks: 0, played: 0, tgt: 0 };
   applyFight(run.combat);
+  if (PG().startStr) run.combat.st.str += PG().startStr;
   run.ov = null;
   startTurn(true);
   saveStore();
@@ -2038,18 +2063,19 @@ function drawCards(n) {
 }
 function startTurn(first) {
   const c = run.combat;
-  c.turn++; c.atks = 0; c.played = 0;
-  if (!first) c.block = PG().keepBlock || rl("r_hourglass") ? Math.floor(c.block / 2) : 0; // start-of-fight Block only lasts the first turn
+  c.turn++; c.atks = 0; c.played = 0; c.fdUsed = false; c.cdUsed = false;
+  if (!first) c.block = PG().keepAll ? c.block : PG().keepBlock || rl("r_hourglass") ? Math.floor(c.block / 2) : 0; // start-of-fight Block only lasts the first turn
   if (c.bpt) c.block += blockAmt(c.bpt);
   if (c.st.burn) {
     hurtPlayer(c.st.burn, true); c.st.burn -= burnDecay(c.st.burn);
     if (run.hp <= 0) return loseFight();
   }
+  if (PG().regenTurn && run.hp < run.maxHp) { const rh = Math.min(PG().regenTurn, run.maxHp - run.hp); run.hp += rh; floatAt($("pava"), "🌅+" + rh, "heal"); }
   if (run.st.regen > 0 && run.hp < run.maxHp) { const h = Math.min(run.st.regen, run.maxHp - run.hp); run.hp += h; floatAt($("pava"), "💚+" + h, "heal"); }
   if (rl("r_crown")) { hurtPlayer(2, true); if (run.hp <= 0) return loseFight(); }
   c.en = BASE_EN + (c.enMod || 0) + (rl("r_crown") ? 1 : 0) + (c.turn === 1 ? (c.en1 || 0) + (rl("r_battery") ? 1 : 0) - (rl("c_slow") ? 1 : 0) : 0) + (pLv("overflow") && Math.random() < PF.overflow(pLv("overflow")) ? 1 : 0) + (c.turn === 1 ? PG().enFirst || 0 : 0) + (Math.floor(run.st.enChance || 0) + (Math.random() < ((run.st.enChance || 0) % 1) ? 1 : 0));
   c.en = Math.max(0, c.en);
-  let n = Math.max(0, handLim() - c.hand.length) + (c.dpt || 0);
+  let n = Math.max(0, handLim() - c.hand.length) + (c.dpt || 0) + (PG().drawTurn || 0);
   if (c.turn === 1) n += run.st.drawFirst + (pLv("quick") ? 1 : 0) + (c.draw1 || 0) + (rl("r_boots") ? 2 : 0);
   else if (pLv("quick") && Math.random() < PF.quick(pLv("quick"))) n++;
   layFor = null; hcur = null;
@@ -2064,19 +2090,19 @@ function fixTarget() {
   const c = run.combat;
   if (!c.foes[c.tgt] || c.foes[c.tgt].dead) c.tgt = Math.max(0, c.foes.findIndex(f => !f.dead));
 }
-const blockAmt = (b, d) => Math.round(b * (1 + run.st.def) * (d ? tmul(d, "_blk") : 1));
+const blockAmt = (b, d) => Math.round(b * (1 + run.st.def + (PG().defX || 0)) * (d ? tmul(d, "_blk") : 1));
 // damage of one hit of card d against foe f (before crits)
 function hitDmg(d, f, inHand) { // inHand: the card is still in the hand (a preview), so count its slot as empty
   const c = run.combat, s = run.st;
   let base = (d.slam ? Math.round(c.block * (d.lvm || 1)) : d.dmg) + (d.combo || 0) * (c.played || 0) + c.st.str + (pLv("keen") || 0) + (rl("r_whet") ? 2 : 0), mult = (1 + s.atk) * tmul(d, "_atk") * (1 + (d.mult || 0));
-  if (d.cost >= 2) mult *= 1 + s.heavy;
+  if (d.cost >= 2) mult *= 1 + s.heavy + (PG().heavyX || 0);
   mult *= 1 + (s.combo + (pLv("momentum") ? PF.momentum(pLv("momentum")) : 0)) * c.atks;
   if (pLv("laststand") && run.hp < run.maxHp * 0.3) mult *= 1 + PF.laststand(pLv("laststand"));
   const ln = (d.lone || 0) + (d.type === "atk" ? (c.loneAll || 0) + (PG().loneAll || 0) : 0);
   if (ln) mult *= 1 + ln * Math.max(0, handLim() - c.hand.length + (inHand ? 1 : 0));
   if (c.st.weak) mult *= 0.75;
   mult *= c.dmgMod || 1;
-  if (f) { if (f.st.vuln) mult *= 1.5; if (d.exec && f.hp < f.maxHp / 2) mult *= 2; }
+  if (f) { if (f.st.vuln) mult *= 1.5 + (PG().vulnX || 0); if (d.exec && f.hp < f.maxHp / 2) mult *= 2; }
   return Math.max(0, Math.round(base * mult)); // round, not floor: small bonuses should not vanish below a whole point
 }
 // live card numbers: level/perks, plus what it grew while kept in hand
@@ -2109,11 +2135,16 @@ function playCard(hi) {
       if (f.dodgeCh && Math.random() < f.dodgeCh) { floatAt(foeEl(f), "💨 Miss", "blk"); continue; }
       const crit = Math.random() < Math.min(0.9, run.st.crit + (d.critPlus || 0) + (c.critMod || 0) + (rl("r_lens") ? 0.1 : 0));
       damageFoe(f, Math.floor(hitDmg(d, f) * (crit ? run.st.critMult : 1)), crit);
+      if (crit && PG().critDraw && !c.cdUsed) { c.cdUsed = true; drawCards(PG().critDraw); }
     }
   }
   if (d.vuln) for (const f of targets) if (!f.dead) f.st.vuln += d.vuln;
   if (d.weak) for (const f of targets) if (!f.dead) f.st.weak += d.weak;
-  if (d.burn) for (const f of targets) if (!f.dead) f.st.burn += Math.round(d.burn * (1 + (tmul(d, "_atk") - 1) * 0.5)); // Burn ticks many times: it gets half the weapon scaling
+  if (d.burn) {
+    const bn = Math.round(d.burn * (1 + (tmul(d, "_atk") - 1) * 0.5)); // Burn ticks many times: it gets half the weapon scaling
+    for (const f of targets) if (!f.dead) f.st.burn += bn;
+    if (PG().burnSpread && targets.length === 1) for (const f of aliveFoes()) if (f !== targets[0]) f.st.burn += Math.floor(bn / 2);
+  }
   if (d.block) { const b = blockAmt(d.block, d); c.block += b; floatAt($("pava"), `🛡️+${b}`, "blk"); }
   if (d.str) c.st.str += d.str;
   if (d.bpt) c.bpt += Math.round(d.bpt * tmul(d, "_blk"));
@@ -2124,6 +2155,7 @@ function playCard(hi) {
     const amt = Math.round(d.heal * tmul(d, "_blk")), h = Math.min(amt, run.maxHp - run.hp);
     run.hp += h; if (h) floatAt($("pava"), "+" + h, "heal");
     if (PG().healToBlock && amt > h) c.block += amt - h;
+    if (PG().healToDmg && amt > h) hitRandom(amt - h);
   }
   if (d.tag && run.mode !== "pvp") gainMastery(d.tag, 1);
   if (d.type === "atk") {
@@ -2136,6 +2168,7 @@ function playCard(hi) {
   if (d.loneAll) c.loneAll = (c.loneAll || 0) + d.loneAll;
   if (d.dump) { const rest = c.hand.splice(0); rest.forEach(discardCard); if (d.dumpDmg) for (let i = 0; i < rest.length; i++) hitRandom(Math.round(d.dumpDmg * (1 + run.st.atk) * tmul(d, "_atk"))); }
   if (d.draw) drawCards(d.draw);
+  if (d.cost === 0 && PG().freeDraw && !c.fdUsed) { c.fdUsed = true; drawCards(PG().freeDraw); }
   c.played = (c.played || 0) + 1;
   (d.exhaust || d.type === "pow" ? c.exh : c.disc).push(ci);
   if (run.hp <= 0) return loseFight();
@@ -2155,6 +2188,7 @@ function discardCard(ci) {
   const c = run.combat, o = cardOf(ci).onDisc;
   flyOut(ci, $("piles").lastElementChild);
   delete ci.held; c.disc.push(ci);
+  if (PG().discBlock) c.block += PG().discBlock;
   if (o) {
     if (o.dmg) hitRandom(Math.round(o.dmg * (1 + run.st.atk) * tmul(cardOf(ci), "_atk")));
     if (o.block) { const b = blockAmt(o.block); c.block += b; floatAt($("pava"), `🛡️+${b}`, "blk"); }
@@ -2183,13 +2217,14 @@ function damageFoe(f, dmg, crit) {
   const el = foeEl(f);
   floatAt(el, (crit ? "CRIT " : "") + (dmg - absorbed ? fmtN(dmg - absorbed) : "🛡️"), crit ? "crit" : "");
   animFoe(f, "hit");
-  if (f.hp <= 0 && !f.dead) { f.dead = true; animFoe(f, "die"); if (!f.pvp) { run.kills++; const xp = xpOf(f); run.combat.xpGot = (run.combat.xpGot || 0) + xp; gainCharXp(xp); } }
+  if (f.hp <= 0 && !f.dead) { f.dead = true; animFoe(f, "die"); if (!f.pvp && PG().killEn) run.combat.en += PG().killEn; if (!f.pvp) { run.kills++; const xp = xpOf(f); run.combat.xpGot = (run.combat.xpGot || 0) + xp; gainCharXp(xp); } }
 }
 function hurtPlayer(dmg, pierce) {
   const c = run.combat;
   let rest = dmg;
   if (!pierce) { const a = Math.min(c.block, rest); c.block -= a; rest -= a; }
   run.hp = Math.max(0, run.hp - rest);
+  if (run.hp <= 0 && PG().ward && !c.wardUsed) { c.wardUsed = true; run.hp = Math.max(1, Math.ceil(run.maxHp * 0.3)); floatAt($("pava"), "👼 " + L("โอกาสที่สอง!", "Second Chance!"), "heal"); }
   floatAt($("pava"), rest ? "-" + rest : "🛡️", rest ? "bad" : "blk");
   if (rest) { const g = $("game"); g.classList.remove("shake"); void g.offsetWidth; g.classList.add("shake"); $("flash").style.opacity = .3; setTimeout(() => $("flash").style.opacity = 0, 120); }
 }
@@ -2234,9 +2269,11 @@ async function foePhase(c) {
     if (m.a) {
       animFoe(f, "lunge");
       for (let h = 0; h < (m.h || 1); h++) {
-        if (c.st.dodge > 0) { c.st.dodge--; floatAt($("pava"), "🌬️ " + L("หลบ!", "Dodge!"), "blk"); continue; }
-        if (Math.random() < Math.min(0.9, run.st.dodge || 0)) { floatAt($("pava"), "💨 Miss", "blk"); continue; }
+        if (c.st.dodge > 0) { c.st.dodge--; if (PG().dodgeCounter && !f.dead) damageFoe(f, PG().dodgeCounter, false); floatAt($("pava"), "🌬️ " + L("หลบ!", "Dodge!"), "blk"); continue; }
+        if (Math.random() < Math.min(0.9, run.st.dodge || 0)) { if (PG().dodgeCounter && !f.dead) damageFoe(f, PG().dodgeCounter, false); floatAt($("pava"), "💨 Miss", "blk"); continue; }
+        const hadBlock = c.block > 0;
         hurtPlayer(foeHit(f, m));
+        if (PG().blockThorns && hadBlock && !f.dead) damageFoe(f, PG().blockThorns, false);
         if (pLv("thorns") && !f.dead) damageFoe(f, PF.thorns(pLv("thorns")), false);
         if (rl("r_mirror") && !f.dead) damageFoe(f, 3, false);
         if (run.hp <= 0) break;
