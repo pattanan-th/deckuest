@@ -62,7 +62,7 @@ function rerender() {
 }
 
 // version shown small on the home / profile screens and in the pause menu; bump it with every release
-const GAME_VER = "1.11.0";
+const GAME_VER = "1.11.1";
 
 // ================= cards =================
 // type: atk (attack) | skl (skill) | pow (power: stays in play for the fight). r: 0 starter/weapon, 1 common, 2 uncommon, 3 rare.
@@ -570,12 +570,12 @@ function statsOf(pr) {
   }
   // each stat's own effect (tuned to about +1% power per point)
   s.atk += SX.str * (S("str") - STAT_BASE);
-  s.crit += 0.01 * (S("dex") - STAT_BASE); // no cap on the stat; in a fight crit still tops out at 90%
-  s.enChance = +(SX.int * (S("int") - STAT_BASE)).toFixed(3); // every full 100% is a guaranteed +1⚡
+  s.crit += pr.capStats ? Math.min(0.6, 0.01 * (S("dex") - STAT_BASE)) : 0.01 * (S("dex") - STAT_BASE); // no cap on the stat (equal-stat PvP keeps the old caps); in a fight crit still tops out at 90%
+  s.enChance = +(pr.capStats ? Math.min(0.6, SX.int * (S("int") - STAT_BASE)) : SX.int * (S("int") - STAT_BASE)).toFixed(3); // every full 100% is a guaranteed +1⚡
   s.killHeal += 0.005 * (S("fai") - STAT_BASE);
   s.regen = Math.floor((S("fai") - STAT_BASE) / SX.faiRegen);
   s.hp *= 1 + SX.vit * (S("vit") - STAT_BASE);
-  s.dodge = +(SX.agi * (S("agi") - STAT_BASE)).toFixed(3); // no cap on the stat; in a fight dodge tops out at 90%
+  s.dodge = +(pr.capStats ? Math.min(0.2, SX.agi * (S("agi") - STAT_BASE)) : SX.agi * (S("agi") - STAT_BASE)).toFixed(3); // no cap on the stat; in a fight dodge tops out at 90%
   // class card power: the best held weapon of that class (its scaling grades x requirement), otherwise a little from the class stat
   const weps = hands.filter(v => isWeaponId(v.id)), top = Math.max(...STATS.map(sd => S(sd.id)));
   s.unarmed = !weps.length;
@@ -1428,7 +1428,7 @@ function normStat(q) {
 }
 function pvpClone(pr, mode) {
   if (mode === "A") return pr;
-  const q = { ...pr, lvl: NORM_LV };
+  const q = { ...pr, lvl: NORM_LV, capStats: true }; // equal-stat duels keep the stat caps: the budget is the same, so the caps keep it fair
   if (mode === "B") { // only the weapons you hold (at base quality): no armor, accessories, passives, perks or card levels
     const hs = new Set(pr.hands.filter(Boolean));
     q.items = pr.items.map(it => hs.has(it.u) ? { ...it, r: 0, e: 0 } : it);
