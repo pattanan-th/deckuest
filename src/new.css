@@ -476,3 +476,7 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
 @media (min-width: 1000px) and (min-height: 640px) { .treecards .cardrow.mini .hc { height: 172px; min-height: 172px; } }
 .treecards .tcard { height: 262px; justify-content: flex-start; }
 .treecards .tcard .price { min-height: 30px; display: flex; align-items: center; }
+
+/* story pages: a fixed-height text window, so Next / Prev stay in the same place however long the page is */
+.stText { height: calc(var(--gh) - 290px); max-height: none; min-height: 160px; }
+@media (max-width: 560px) { .stText { height: calc(var(--gh) - 270px); } }

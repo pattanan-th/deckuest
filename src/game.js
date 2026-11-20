@@ -62,7 +62,7 @@ function rerender() {
 }
 
 // version shown small on the home / profile screens and in the pause menu; bump it with every release
-const GAME_VER = "1.3.2";
+const GAME_VER = "1.3.3";
 
 // ================= cards =================
 // type: atk (attack) | skl (skill) | pow (power: stays in play for the fight). r: 0 starter/weapon, 1 common, 2 uncommon, 3 rare.
@@ -2328,7 +2328,7 @@ function renderStory() {
       `<p class="sub" style="margin-top:14px">${L("แต่ละบท: อ่านเนื้อเรื่อง แล้วสู้ 4 ไฟต์ + บอส · ผ่านครั้งแรกได้อุปกรณ์พิเศษ · แพ้แล้วเริ่มบทใหม่ได้", "Each chapter: read it, then 4 fights and a boss · the first clear gives special gear · lose and you can retry")}</p>`;
   } else if (storyView === "read") {
     const c = E.chapters[storyCh], pages = storyPages(storyCh), last = storyPage >= pages.length - 1;
-    body.innerHTML = `<div class="stHead">${E.part} · ${E.title} — ${c.n}</div>` + (storyPage === 0 ? `<div class="stSub">${esc(KINGHOOD[c.key].sub)}</div>` : "") +
+    body.innerHTML = `<div class="stHead">${E.part} · ${E.title} — ${c.n}</div>` + `<div class="stSub"${storyPage === 0 ? "" : ' style="visibility:hidden"'}>${esc(KINGHOOD[c.key].sub)}</div>` +
       `<div class="stText">${pages[storyPage].map(x => `<p>${esc(x)}</p>`).join("")}</div>` +
       `<div class="row stNav"><button class="ghost" data-st="prev"${storyPage ? "" : " disabled"}>${t("stPrev")}</button><span class="sub" style="margin:0">${t("stPage", storyPage + 1, pages.length)}</span>` +
       (last ? `<button data-st="fight">${t("stFight")}</button>` : `<button data-st="next">${t("stNext")}</button>`) +
