@@ -590,3 +590,7 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
   .treecards .cardrow.mini .hc { height: 214px; min-height: 214px; }
 }
 .treecards .tcard .mergeBtn { font-size: 12px; white-space: nowrap; padding: 4px 2px; }
+/* the cost badge sits half outside the card's corner: the card must not clip it */
+.treecards .cardrow.mini .hc { overflow: visible; }
+.treecards .tcard { padding-top: 12px; }
+.treecards .tcard .hc .cc { z-index: 2; }
