@@ -62,7 +62,7 @@ function rerender() {
 }
 
 // version shown small on the home / profile screens and in the pause menu; bump it with every release
-const GAME_VER = "1.16.0";
+const GAME_VER = "1.17.0";
 
 // ================= cards =================
 // type: atk (attack) | skl (skill) | pow (power: stays in play for the fight). r: 0 starter/weapon, 1 common, 2 uncommon, 3 rare.
@@ -1127,6 +1127,7 @@ function homeMenu() {
     { ic: "🏪", t: t("mShop"), d: t("mShopD"), go: openMShop },
     { ic: "🎒", t: t("mInv") + (pr.pts ? " ⭐" : ""), d: t("mInvD") + (pr.pts ? L(` · มีแต้ม stat ว่าง ${pr.pts}`, ` · ${pr.pts} stat points to spend`) : ""), go: openInv },
     { ic: "🌳", t: L("ความชำนาญอาวุธ", "Weapon Mastery") + (Object.values(pr.mast).some(m => m.pts) ? " ⭐" : ""), d: L("อัปเลเวลการ์ดถาวรและ perk ของแต่ละแนวอาวุธ", "Permanently level up each theme's cards and perks"), go: openTree },
+    { ic: "🏺", t: L("สมุด Relic", "Relic Book"), d: L(`relic ที่เคยได้ ${(pr.relicSeen || []).length}/${RELICS.length} · ชุด relic · คำสาป`, `Relics found ${(pr.relicSeen || []).length}/${RELICS.length} · sets · curses`), go: openCodex },
     { ic: "💾", t: L("ย้าย / สำรองเซฟ", "Move / back up save"), d: L("ส่งเซฟไปอีกเครื่องด้วยรหัส 5 ตัวหรือลิงก์ · หรือเก็บรหัสเซฟไว้", "Send your save to another device with a 5-letter code or a link, or keep a save code"), go: openBackup },
     { ic: "🌐", t: t("mLang"), d: t("mLangD"), go: toggleUi },
   ];
@@ -1217,6 +1218,21 @@ async function hashImport() {
   if (!location.hash.startsWith("#save=")) return;
   const h = location.hash; history.replaceState(null, "", location.pathname + location.search);
   try { const sv = await unpackSave(h); if (importSave(sv)) goHome(); } catch { alert(L("ลิงก์เซฟไม่ถูกต้อง", "That save link is not valid")); }
+}
+function openCodex() {
+  const pr = prof(), seen = new Set([...(pr.relicSeen || []), ...((pr.run && pr.run.relics) || [])]);
+  const cell = r => seen.has(r.id) ? relicCard(r.id) : `<div class="relic unseen t-${r.tier || "c"}"><span class="ri">❓</span><b>???</b>${relicTag(r)}<small>${L("ยังไม่เคยได้", "Not found yet")}</small></div>`;
+  const grp = (title, list) => `<div class="cxh">${title} <small>${list.filter(r => seen.has(r.id)).length}/${list.length}</small></div><div class="relgrid cx">${list.map(cell).join("")}</div>`;
+  const sets = RELIC_SETS.map(x => `<div class="cxset${seen.has(x.a) && seen.has(x.b) ? "" : " off"}"><span>${x.ic}</span><div><b>${tr(x.t)}</b> <small>${relicDef(x.a).ic} + ${relicDef(x.b).ic}</small><div class="d">${tr(x.d)}</div></div></div>`).join("");
+  const el = $("ov"); el.classList.remove("hidden");
+  el.innerHTML = `<div class="ovbox codex"><div class="big">🏺 ${L("สมุด Relic", "Relic Book")}</div>` +
+    `<div class="sub" style="margin:2px 0 8px">${L("relic หาได้ในโหมดแผนที่และหอคอย · relic ประจำคลาสจะเจอบ่อยขึ้นเมื่อถือคลาสนั้น · ถือ 2 ชิ้นที่เข้าชุดกันได้โบนัสเพิ่ม", "Relics drop in the Map and the Tower · class relics show up more while you hold that class · two matching relics make a set")}</div>` +
+    grp("⚪ " + tr(TIER_N.c), RELICS.filter(r => !r.tier && !r.cls)) + grp("🔵 " + tr(TIER_N.r), RELICS.filter(r => r.tier === "r" && !r.cls)) +
+    grp("🧭 " + L("ประจำคลาส", "Class relics"), RELICS.filter(r => r.cls)) + grp("👑 " + tr(TIER_N.b), RELICS.filter(r => r.tier === "b")) +
+    `<div class="cxh">🔗 ${L("ชุด relic", "Sets")}</div><div class="cxsets">${sets}</div>` +
+    `<div class="cxh">☠️ ${L("คำสาป", "Curses")} <small>${L("ล้างได้ที่ร้านค้าในรันหรือแท่นต้องสาป", "lift them at a run shop or the cursed altar")}</small></div><div class="relgrid cx">${CURSES.map(r => relicCard(r.id)).join("")}</div>` +
+    `<div class="row" style="justify-content:center;margin-top:10px"><button class="ghost" id="cxClose">${L("ปิด", "Close")}</button></div></div>`;
+  $("cxClose").onclick = () => { el.classList.add("hidden"); el.innerHTML = ""; goHome(); };
 }
 function closeBackup() { xferStop(); $("ov").classList.add("hidden"); $("ov").innerHTML = ""; if (!prof()) openProfiles(); else goHome(); }
 function openBackup() {
@@ -1615,8 +1631,8 @@ async function pvpGotTurn(m) {
   for (const h of hits) {
     await wait(320);
     if (!run || run.combat !== c || pv.phase !== "duel") return;
-    if (c.st.dodge > 0) { c.st.dodge--; if (LA) LA.dodge++; floatAt($("pava"), "🌬️ " + L("หลบ!", "Dodge!"), "blk"); renderCombat(); continue; }
-    if (Math.random() < Math.min(0.9, run.st.dodge || 0)) { if (LA) LA.dodge++; floatAt($("pava"), "💨 Miss", "blk"); continue; }
+    if (c.st.dodge > 0) { c.st.dodge--; if (LA) LA.dodge++; if (rl("r_arrow")) c.drawNext = (c.drawNext || 0) + 1; floatAt($("pava"), "🌬️ " + L("หลบ!", "Dodge!"), "blk"); renderCombat(); continue; }
+    if (Math.random() < Math.min(0.9, run.st.dodge || 0)) { if (LA) LA.dodge++; if (rl("r_arrow")) c.drawNext = (c.drawNext || 0) + 1; floatAt($("pava"), "💨 Miss", "blk"); continue; }
     if (!LA) logBegin(); hurtPlayer(h); renderCombat();
     if (run.hp <= 0) break;
   }
@@ -1813,7 +1829,7 @@ function nodeDone() {
 }
 
 // ---------- rewards ----------
-const goldMult = () => 1 + run.st.goldMult + (run.st.pass.thrifty ? PF.thrifty(run.st.pass.thrifty) : 0) + (rl("r_coin") ? 0.3 : 0) - (rl("c_greed") ? 0.3 : 0);
+const goldMult = () => 1 + run.st.goldMult + (run.st.pass.thrifty ? PF.thrifty(run.st.pass.thrifty) : 0) + (rl("r_coin") ? 0.3 : 0) - (rl("c_greed") ? 0.3 : 0) + (rl("r_gem") ? 1 : 0) + (setOn("s_rich") ? 0.3 : 0);
 const gainGold = g => { g = Math.round(g * goldMult()); run.gold += g; return g; };
 const luck = () => run.st.luck + (run.st.pass.scholar ? PF.scholar(run.st.pass.scholar) : 0);
 // weight of a card in rolls: each worn piece of a theme adds SYN_W to that theme's cards; "only" cards need the theme worn
@@ -1849,7 +1865,7 @@ function genShop() {
   const act = runAct(), m = 1 + 0.1 * (act - 1);
   const ids = [...rollCards(3, [100, 0, 0]), ...rollCards(1, [0, 100, 0]), ...rollCards(1, [0, 0, 100])];
   const base = [0, 50, 75, 150];
-  return { k: "shop", stock: [...new Set(ids)].map(id => ({ id, price: Math.round(base[CARDS[id].r] * m * (0.9 + Math.random() * 0.2)), sold: false })), pots: [rollPot(0.15), rollPot(0.15)].map(id => ({ id, price: Math.round((potDef(id).rare ? 130 : 50) * m), sold: false })), rmDone: false };
+  return { k: "shop", stock: [...new Set(ids)].map(id => ({ id, price: Math.round(base[CARDS[id].r] * m * (0.9 + Math.random() * 0.2)), sold: false })), pots: [rollPot(0.15), rollPot(0.15)].map(id => ({ id, price: Math.round((potDef(id).rare ? 130 : 50) * m), sold: false })), rmDone: false, curseCost: Math.round(80 * m) };
 }
 const healRun = share => { const h = Math.max(1, Math.round(run.maxHp * share)); const before = run.hp; run.hp = Math.min(run.maxHp, run.hp + h); return run.hp - before; };
 function upgradeRandom(n) {
@@ -1940,18 +1956,52 @@ const RELICS = [
   { id: "r_heart", ic: "❤️", t: ["หัวใจยักษ์", "Giant's Heart"], d: ["Max HP +20", "Max HP +20"], on: () => { run.maxHp += 20; run.hp += 20; } },
   { id: "r_vamp", ic: "🧛", t: ["เขี้ยวแวมไพร์", "Vampire Fang"], d: ["เล่นการ์ดโจมตี ฟื้น 1 HP", "Heal 1 HP per attack card played"] },
   { id: "r_coin", ic: "🪙", t: ["เหรียญนำโชค", "Lucky Coin"], d: ["ทองที่ได้ +30%", "+30% gold"] },
-  { id: "r_lens", ic: "🔍", t: ["แว่นนักล่า", "Hunter's Lens"], d: ["Crit +10%", "Crit +10%"] },
-  { id: "r_ember", ic: "🔥", t: ["ถ่านไม่มอด", "Undying Ember"], d: ["ศัตรูเริ่มทุกไฟต์ด้วย Burn 4", "Enemies start every fight with 4 Burn"] },
+  { id: "r_lens", tier: "r", ic: "🔍", t: ["แว่นนักล่า", "Hunter's Lens"], d: ["Crit +10%", "Crit +10%"] },
+  { id: "r_ember", tier: "r", ic: "🔥", t: ["ถ่านไม่มอด", "Undying Ember"], d: ["ศัตรูเริ่มทุกไฟต์ด้วย Burn 4", "Enemies start every fight with 4 Burn"] },
   { id: "r_mirror", ic: "🪞", t: ["กระจกหนาม", "Spiked Mirror"], d: ["โดนตีแล้วสะท้อน 3 ดาเมจ", "Deal 3 damage back when hit"] },
-  { id: "r_hourglass", ic: "⏳", t: ["นาฬิกาทราย", "Hourglass"], d: ["Block ที่เหลือเก็บไว้ครึ่งหนึ่งข้ามเทิร์น", "Keep half your Block between turns"] },
+  { id: "r_hourglass", tier: "r", ic: "⏳", t: ["นาฬิกาทราย", "Hourglass"], d: ["Block ที่เหลือเก็บไว้ครึ่งหนึ่งข้ามเทิร์น", "Keep half your Block between turns"] },
   { id: "r_feather", ic: "🪶", t: ["ขนนกลม", "Wind Feather"], d: ["เริ่มทุกไฟต์ด้วยหลบ 1", "Start every fight with 1 Dodge"] },
-  { id: "r_bag", ic: "🎒", t: ["กระเป๋าก้นลึก", "Bottomless Bag"], d: ["ถือการ์ดได้ +1 ใบ", "Hand limit +1"] },
+  { id: "r_bag", tier: "r", ic: "🎒", t: ["กระเป๋าก้นลึก", "Bottomless Bag"], d: ["ถือการ์ดได้ +1 ใบ", "Hand limit +1"] },
   { id: "r_belt", ic: "🧪", t: ["เข็มขัดยา", "Potion Belt"], d: ["พกยาได้ 5 ขวด · ได้ยาทันที 1 ขวด", "Carry 5 potions · get one now"], on: () => { if (potsOf(run).length < potCap()) run.pots.push("potion"); } },
-  { id: "r_clover", ic: "🍀", t: ["ใบโคลเวอร์", "Four-Leaf Clover"], d: ["รางวัลการ์ดมีให้เลือก 4 ใบ", "Card rewards offer 4 choices"] },
-  { id: "r_phoenix", ic: "🦅", t: ["ขนฟีนิกซ์", "Phoenix Plume"], d: ["ล้มบอสแล้วฟื้นเลือดเต็ม", "Fully heal after beating a boss"] },
-  { id: "r_anvil", ic: "⚒️", t: ["ทั่งพกพา", "Pocket Anvil"], d: ["ได้ทันที: อัปเกรดการ์ดสุ่ม 3 ใบ", "Now: upgrade 3 random cards"], on: () => upgradeRandom(3) },
-  { id: "r_crown", ic: "👑", t: ["มงกุฎทรราช", "Tyrant's Crown"], d: ["+1 ⚡ ทุกเทิร์น · เสีย 2 HP ทุกเทิร์น", "+1 ⚡ every turn · lose 2 HP every turn"], rare: 1 },
+  { id: "r_clover", tier: "r", ic: "🍀", t: ["ใบโคลเวอร์", "Four-Leaf Clover"], d: ["รางวัลการ์ดมีให้เลือก 4 ใบ", "Card rewards offer 4 choices"] },
+  { id: "r_phoenix", tier: "r", ic: "🦅", t: ["ขนฟีนิกซ์", "Phoenix Plume"], d: ["ล้มบอสแล้วฟื้นเลือดเต็ม", "Fully heal after beating a boss"] },
+  { id: "r_anvil", tier: "r", ic: "⚒️", t: ["ทั่งพกพา", "Pocket Anvil"], d: ["ได้ทันที: อัปเกรดการ์ดสุ่ม 3 ใบ", "Now: upgrade 3 random cards"], on: () => upgradeRandom(3) },
+  { id: "r_crown", ic: "👑", t: ["มงกุฎทรราช", "Tyrant's Crown"], d: ["+1 ⚡ ทุกเทิร์น · เสีย 2 HP ทุกเทิร์น", "+1 ⚡ every turn · lose 2 HP every turn"], tier: "b" },
+  // class relics: they show up more often while you hold that class
+  { id: "r_axe", tier: "r", cls: "berserker", ic: "🪓", t: ["ขวานกระหายเลือด", "Bloodthirsty Axe"], d: ["HP ต่ำกว่า 50% ดาเมจ +25%", "Below 50% HP: +25% damage"] },
+  { id: "r_sheath", tier: "r", cls: "duelist", ic: "⚔️", t: ["ฝักดาบคู่", "Twin Sheath"], d: ["การ์ดตีหลายครั้ง ตีเพิ่ม 1 ครั้ง", "Multi-hit cards hit once more"] },
+  { id: "r_orb", tier: "r", cls: "sorcerer", ic: "🔮", t: ["ลูกแก้วเพลิง", "Flame Orb"], d: ["Burn บนศัตรูลดลงช้าลงครึ่งหนึ่ง", "Burn on enemies fades half as fast"] },
+  { id: "r_amulet", tier: "r", cls: "cleric", ic: "📿", t: ["จี้ศักดิ์สิทธิ์", "Holy Amulet"], d: ["การ์ดฮีล ได้ Block เท่ากับที่ฮีลด้วย", "Healing cards also give that much Block"] },
+  { id: "r_fort", tier: "r", cls: "guardian", ic: "🏰", t: ["ป้อมพกพา", "Pocket Fort"], d: ["เริ่มเทิร์นโดยยังมี Block เหลือ ได้ Block +4", "Start a turn with Block left: +4 Block"] },
+  { id: "r_arrow", tier: "r", cls: "ranger", ic: "🏹", t: ["ลูกธนูลม", "Wind Arrow"], d: ["หลบการโจมตีได้ เทิร์นหน้าจั่ว +1 ต่อครั้ง", "Each dodge: draw 1 more next turn"] },
+  { id: "r_dice", tier: "r", cls: "gambler", ic: "🎲", t: ["ลูกเต๋าถ่วง", "Loaded Dice"], d: ["การ์ด Gambler ดาเมจสุ่ม ×1.0–×1.6 (ไม่มีวันแย่ลง)", "Gambler cards deal ×1.0–×1.6 damage (never worse)"] },
+  { id: "r_sash", tier: "r", cls: "martial", ic: "🥋", t: ["ผ้าคาดเอวดำ", "Black Sash"], d: ["Combo เก็บไว้ครึ่งหนึ่งข้ามเทิร์น", "Keep half your Combo count between turns"] },
+  // rhythm relics
+  { id: "r_bell", tier: "r", ic: "🔔", t: ["ระฆังเทิร์นสาม", "Third Bell"], d: ["ทุกเทิร์นที่ 3, 6, 9… ได้ +2⚡", "Every 3rd turn: +2⚡"] },
+  { id: "r_fifth", tier: "r", ic: "🖐️", t: ["มือที่ห้า", "Fifth Hand"], d: ["การ์ดใบที่ 5 ที่เล่นในเทิร์น ทำงานซ้ำอีกครั้งฟรี", "The 5th card you play in a turn plays twice"] },
+  { id: "r_bin", ic: "🗑️", t: ["ถังขยะวิเศษ", "Magic Bin"], d: ["ทิ้งการ์ด 3 ใบขึ้นไปในเทิร์นเดียว เทิร์นหน้า +1⚡", "Discard 3+ cards in a turn: +1⚡ next turn"] },
+  { id: "r_skull", ic: "💀", t: ["กะโหลกนักล่า", "Hunter's Skull"], d: ["ล้มศัตรูได้ ฟื้น 5 HP", "Killing an enemy heals 5 HP"] },
+  { id: "r_moon", ic: "🌙", t: ["พระจันทร์เสี้ยว", "Crescent Moon"], d: ["เริ่มไฟต์ด้วย HP เต็ม: ดาเมจ +15% ทั้งไฟต์", "Start a fight at full HP: +15% damage for that fight"] },
+  { id: "r_magnet", ic: "🧲", t: ["แม่เหล็กยา", "Potion Magnet"], d: ["ชนะไฟต์ มีโอกาส 25% ได้ยา", "Winning a fight: 25% chance of a potion"] },
+  // boss relics: strong, with a price
+  { id: "r_pact", tier: "b", ic: "🩸", t: ["สัญญาเลือด", "Blood Pact"], d: ["ดาเมจ +40% · เริ่มทุกไฟต์เสีย 10% HP", "+40% damage · lose 10% HP at the start of every fight"] },
+  { id: "r_twoface", tier: "b", ic: "🎭", t: ["หน้ากากสองหน้า", "Two-Faced Mask"], d: ["จั่ว +2 ทุกเทิร์น · ถือการ์ดได้ −1 ใบ", "Draw 2 more every turn · hand limit −1"] },
+  { id: "r_darkstar", tier: "b", ic: "🌑", t: ["ดาวมืด", "Dark Star"], d: ["+1⚡ ทุกเทิร์น · ศัตรูเริ่มไฟต์ด้วย Strength +3", "+1⚡ every turn · enemies start fights with +3 Strength"] },
+  { id: "r_gem", tier: "b", ic: "💎", t: ["เพชรต้องสาป", "Cursed Diamond"], d: ["ทองที่ได้ ×2 · Max HP −25%", "×2 gold · Max HP −25%"], on: () => { run.maxHp = Math.max(10, Math.round(run.maxHp * 0.75)); run.hp = Math.min(run.hp, run.maxHp); }, off: () => { run.maxHp = Math.round(run.maxHp / 0.75); } },
 ];
+// sets: two relics that work together give a bonus while you hold both
+const RELIC_SETS = [
+  { id: "s_keen", a: "r_whet", b: "r_lens", ic: "✴️", t: ["คมกริบ", "Razor Edge"], d: ["Crit แรงขึ้นอีก +50%", "Crits deal +50% more"] },
+  { id: "s_bastion", a: "r_shield", b: "r_hourglass", ic: "🏯", t: ["ป้อมปราการ", "Bastion"], d: ["เริ่มไฟต์ Block +8 เพิ่ม", "Start fights with 8 more Block"] },
+  { id: "s_inferno", a: "r_ember", b: "r_orb", ic: "🌋", t: ["นรกไฟ", "Inferno"], d: ["Burn บนศัตรูทำดาเมจ +3", "Burn on enemies deals +3"] },
+  { id: "s_night", a: "r_vamp", b: "r_skull", ic: "🦇", t: ["ราตรีกาล", "Nightfall"], d: ["เขี้ยวแวมไพร์ฟื้น 3 แทน 1", "Vampire Fang heals 3 instead of 1"] },
+  { id: "s_rich", a: "r_coin", b: "r_gem", ic: "🤑", t: ["มหาเศรษฐี", "Tycoon"], d: ["ทองที่ได้ +30% เพิ่มอีก", "+30% more gold"] },
+  { id: "s_rush", a: "r_boots", b: "r_battery", ic: "🚀", t: ["ออกตัวไว", "Head Start"], d: ["เทิร์นแรกจั่ว +1 และ +1⚡ เพิ่ม", "Turn 1: draw +1 and +1⚡ more"] },
+  { id: "s_gale", a: "r_feather", b: "r_arrow", ic: "🌪️", t: ["พายุลม", "Gale"], d: ["เริ่มไฟต์หลบ +1 เพิ่ม", "Start fights with 1 more Dodge"] },
+  { id: "s_brew", a: "r_belt", b: "r_magnet", ic: "⚗️", t: ["นักปรุงยา", "Brewmaster"], d: ["ชนะไฟต์ได้ยาทุกครั้ง (ถ้าช่องว่าง)", "Every win gives a potion (if there is room)"] },
+];
+const setOn = id => { const x = RELIC_SETS.find(q => q.id === id); return !!x && rl(x.a) && rl(x.b); };
+const TIER_N = { c: ["ธรรมดา", "Common"], r: ["หายาก", "Rare"], b: ["บอส", "Boss"] };
 const CURSES = [
   { id: "c_frail", ic: "🦴", t: ["คำสาปกระดูกเปราะ", "Curse of Frailty"], d: ["Max HP −15%", "Max HP −15%"], curse: 1, on: () => { run.maxHp = Math.max(10, Math.round(run.maxHp * 0.85)); run.hp = Math.min(run.hp, run.maxHp); }, off: () => { run.maxHp = Math.round(run.maxHp / 0.85); } },
   { id: "c_weak", ic: "🥀", t: ["คำสาปอ่อนแรง", "Curse of Weakness"], d: ["เริ่มทุกไฟต์ด้วย Weak 1", "Start every fight with 1 Weak"], curse: 1 },
@@ -1972,12 +2022,30 @@ function gainPot(id) { // into a free slot; null when the belt is full
   if (potsOf(run).length >= potCap()) return null;
   run.pots.push(id); return potName(id) + (potDef(id).rare ? " ✨" : "");
 }
-function addRelic(id) { const d = relicDef(id); if (!d || rl(id)) return; (run.relics = run.relics || []).push(id); if (d.on) d.on(); }
+function addRelic(id) {
+  const d = relicDef(id); if (!d || rl(id)) return;
+  (run.relics = run.relics || []).push(id); if (d.on) d.on();
+  const pr = prof(); if (pr && run.mode !== "pvp") { pr.relicSeen = pr.relicSeen || []; if (!pr.relicSeen.includes(id)) pr.relicSeen.push(id); }
+}
 function removeRelic(id) { const d = relicDef(id); if (!rl(id)) return; run.relics = run.relics.filter(x => x !== id); if (d.off) d.off(); }
-const rollRelics = (n, rare) => shuffle(RELICS.filter(r => !rl(r.id) && (rare || !r.rare)).map(r => r.id)).slice(0, n);
-const relicCard = (id, attrs, key) => { const d = relicDef(id); return `<div class="relic${d.curse ? " curse" : ""}"${attrs || ""}><span class="ri">${d.ic}</span><b>${tr(d.t)}</b><small>${tr(d.d)}</small>${key ? `<kbd>${key}</kbd>` : ""}</div>`; };
-const relicIcons = () => (run.relics || []).map(id => { const d = relicDef(id); return `<span class="rlic${d.curse ? " curse" : ""}" title="${esc(tr(d.t) + " · " + tr(d.d))}">${d.ic}</span>`; }).join("");
-const relicLoot = id => { const d = relicDef(id); return `🏺 ${d.ic} ${tr(d.t)} <small>(${tr(d.d)})</small>`; };
+const RTW = { c: { c: 6, r: 2, b: 0 }, elite: { c: 4, r: 3, b: 0 }, boss: { c: 2, r: 4, b: 3 }, altar: { c: 0, r: 3, b: 4 } };
+const holdsCls = cls => !!(run && run.st && ((run.st.tags || {})[cls] || (cls === "martial" && run.st.unarmed)));
+function rollRelics(n, src) { // src: undefined (treasure, market) · "elite" · "boss" · true (the cursed altar)
+  const w = RTW[src === true ? "altar" : src || "c"], out = [];
+  const pool = RELICS.filter(r => !rl(r.id) && w[r.tier || "c"] > 0).map(r => [r.id, w[r.tier || "c"] * (r.cls ? (holdsCls(r.cls) ? 3 : 0.4) : 1)]);
+  while (out.length < n && pool.length) { const i = weightedIdx(pool.map(x => x[1])); out.push(pool[i][0]); pool.splice(i, 1); }
+  return out;
+}
+function relicSetHint(id) { // a set this relic would complete with one you already hold
+  if (!run) return "";
+  const x = RELIC_SETS.find(q => (q.a === id && rl(q.b)) || (q.b === id && rl(q.a)));
+  return x ? `<div class="rset">🔗 ${x.ic} ${tr(x.t)}: ${tr(x.d)}</div>` : "";
+}
+const relicTag = d => d.curse ? `<span class="rtier curse">${L("คำสาป", "Curse")}</span>` : `<span class="rtier t-${d.tier || "c"}">${tr(TIER_N[d.tier || "c"])}${d.cls ? " · " + THEMES[d.cls].ic : ""}</span>`;
+const relicCard = (id, attrs, key) => { const d = relicDef(id); return `<div class="relic${d.curse ? " curse" : " t-" + (d.tier || "c")}"${attrs || ""}><span class="ri">${d.ic}</span><b>${tr(d.t)}</b>${relicTag(d)}<small>${tr(d.d)}</small>${rl(id) ? "" : relicSetHint(id)}${key ? `<kbd>${key}</kbd>` : ""}</div>`; };
+const relicIcons = () => (run.relics || []).map(id => { const d = relicDef(id); return `<span class="rlic${d.curse ? " curse" : ""}" title="${esc(tr(d.t) + " · " + tr(d.d))}">${d.ic}</span>`; }).join("") +
+  RELIC_SETS.filter(x => setOn(x.id)).map(x => `<span class="rlic rsetic" title="${esc("🔗 " + tr(x.t) + " · " + tr(x.d))}">${x.ic}</span>`).join("");
+const relicLoot = id => { const d = relicDef(id), x = RELIC_SETS.find(q => (q.a === id || q.b === id) && setOn(q.id)); return `🏺 ${d.ic} ${tr(d.t)} <small>(${tr(d.d)})</small>` + (x ? ` · 🔗 ${x.ic} <b>${tr(x.t)}</b>` : ""); };
 
 // a fight starts: zone rule, the door's modifiers, then relics
 function applyFight(c) {
@@ -1994,6 +2062,11 @@ function applyFight(c) {
   if (rl("r_feather")) c.st.dodge = Math.min(DODGE_MAX, (c.st.dodge || 0) + 1);
   if (rl("r_ember")) c.foes.forEach(f => f.st.burn += 4);
   if (rl("c_weak")) c.st.weak += 1;
+  if (setOn("s_bastion")) c.block += 8;
+  if (setOn("s_gale")) c.st.dodge = Math.min(DODGE_MAX, (c.st.dodge || 0) + 1);
+  if (rl("r_darkstar")) c.foes.forEach(f => f.st.str += 3);
+  if (rl("r_moon") && run.hp >= run.maxHp) c.dmgMod = (c.dmgMod || 1) * 1.15;
+  if (rl("r_pact")) { c.dmgMod = (c.dmgMod || 1) * 1.4; run.hp = Math.max(1, run.hp - Math.round(run.maxHp * 0.1)); }
 }
 
 // special rooms (Endless Tower only): they run on the event screen
@@ -2043,8 +2116,8 @@ const SPECIAL_EVENTS = [
 // rewards the Endless Tower adds to a won fight (relics, trial prize, milestone); returns loot lines
 function endlessLoot(c, kind) {
   const pr = prof(), loot = [];
-  if (run.trialOn) { const r = rollRelics(1)[0]; if (r) { addRelic(r); loot.push(relicLoot(r)); } run.trialOn = false; }
-  else if (kind === "elite" && Math.random() < 0.35) { const r = rollRelics(1)[0]; if (r) { addRelic(r); loot.push(relicLoot(r)); } }
+  if (run.trialOn) { const r = rollRelics(1, "elite")[0]; if (r) { addRelic(r); loot.push(relicLoot(r)); } run.trialOn = false; }
+  else if (kind === "elite" && Math.random() < 0.35) { const r = rollRelics(1, "elite")[0]; if (r) { addRelic(r); loot.push(relicLoot(r)); } }
   if (kind === "boss" && rl("r_phoenix") && run.hp < run.maxHp) { run.hp = run.maxHp; loot.push(`🦅 ${L("ฟื้นเต็มหลอด", "Fully healed")}`); }
   if (kind === "boss" && run.floor % 10 === 0) {
     pr.endlessMs = pr.endlessMs || [];
@@ -2065,7 +2138,7 @@ EVENTS.push(...SPECIAL_EVENTS);
 const BASE_EN = 3, HAND = 5, HAND_MAX = 10;
 const pLv = id => run.st.pass[id] || 0;
 // cards you may keep at the end of a turn; the start of a turn refills the hand up to it
-const handLim = () => Math.max(2, HAND + ((run.combat && run.combat.handUp) || 0) + (pLv("pockets") ? PF.pockets(pLv("pockets")) : 0) + (rl("r_bag") ? 1 : 0) + ((run.combat && run.combat.handMod) || 0));
+const handLim = () => Math.max(2, HAND + ((run.combat && run.combat.handUp) || 0) + (pLv("pockets") ? PF.pockets(pLv("pockets")) : 0) + (rl("r_bag") ? 1 : 0) - (rl("r_twoface") ? 1 : 0) + ((run.combat && run.combat.handMod) || 0));
 function startCombat(kind) {
   const act = runAct(), d = run.depth;
   let ids;
@@ -2103,10 +2176,12 @@ function drawCards(n) {
 }
 function startTurn(first) {
   const c = run.combat;
-  c.turn++; c.atks = 0; c.played = 0; c.fdUsed = false; c.cdUsed = false;
+  c.turn++; c.atks = 0; c.played = rl("r_sash") ? Math.floor((c.played || 0) / 2) : 0; c.tp = 0; c.fdUsed = false; c.cdUsed = false;
   logPush(`${L("เทิร์น", "Turn")} ${c.turn}`, "t");
+  const left = c.block;
   if (!first) c.block = PG().keepAll ? c.block : PG().keepBlock || rl("r_hourglass") ? Math.floor(c.block / 2) : 0; // start-of-fight Block only lasts the first turn
   if (c.bpt) c.block += blockAmt(c.bpt);
+  if (!first && rl("r_fort") && left > 0) c.block += blockAmt(4);
   if (c.st.burn) {
     logBegin(); hurtPlayer(c.st.burn, true); logEnd("🔥 Burn", "s"); c.st.burn -= burnDecay(c.st.burn);
     if (run.hp <= 0) return loseFight();
@@ -2115,8 +2190,11 @@ function startTurn(first) {
   if (run.st.regen > 0 && run.hp < run.maxHp) { const h = Math.min(run.st.regen, run.maxHp - run.hp); run.hp += h; floatAt($("pava"), "💚+" + h, "heal"); }
   if (rl("r_crown")) { hurtPlayer(2, true); if (run.hp <= 0) return loseFight(); }
   c.en = BASE_EN + (c.enMod || 0) + (rl("r_crown") ? 1 : 0) + (c.turn === 1 ? (c.en1 || 0) + (rl("r_battery") ? 1 : 0) - (rl("c_slow") ? 1 : 0) : 0) + (pLv("overflow") && Math.random() < PF.overflow(pLv("overflow")) ? 1 : 0) + (c.turn === 1 ? PG().enFirst || 0 : 0) + (Math.floor(run.st.enChance || 0) + (Math.random() < ((run.st.enChance || 0) % 1) ? 1 : 0));
+  c.en += (rl("r_bell") && c.turn % 3 === 0 ? 2 : 0) + (rl("r_darkstar") ? 1 : 0) + (c.turn === 1 && setOn("s_rush") ? 1 : 0) + (rl("r_bin") && (c.discT || 0) >= 3 ? 1 : 0);
+  c.discT = 0;
   c.en = Math.max(0, c.en);
-  let n = Math.max(0, handLim() - c.hand.length) + (c.dpt || 0) + (PG().drawTurn || 0);
+  let n = Math.max(0, handLim() - c.hand.length) + (c.dpt || 0) + (PG().drawTurn || 0) + (rl("r_twoface") ? 2 : 0) + (c.drawNext || 0) + (c.turn === 1 && setOn("s_rush") ? 1 : 0);
+  c.drawNext = 0;
   if (c.turn === 1) n += run.st.drawFirst + (pLv("quick") ? 1 : 0) + (c.draw1 || 0) + (rl("r_boots") ? 2 : 0);
   else if (pLv("quick") && Math.random() < PF.quick(pLv("quick"))) n++;
   layFor = null; hcur = null;
@@ -2139,6 +2217,7 @@ function hitDmg(d, f, inHand) { // inHand: the card is still in the hand (a prev
   if (d.cost >= 2) mult *= 1 + s.heavy + (PG().heavyX || 0);
   mult *= 1 + (s.combo + (pLv("momentum") ? PF.momentum(pLv("momentum")) : 0)) * c.atks;
   if (pLv("laststand") && run.hp < run.maxHp * 0.3) mult *= 1 + PF.laststand(pLv("laststand"));
+  if (rl("r_axe") && run.hp < run.maxHp * 0.5) mult *= 1.25;
   const ln = (d.lone || 0) + (d.type === "atk" ? (c.loneAll || 0) + (PG().loneAll || 0) : 0);
   if (ln) mult *= 1 + ln * Math.max(0, handLim() - c.hand.length + (inHand ? 1 : 0));
   if (c.st.weak) mult *= 0.75;
@@ -2161,7 +2240,7 @@ function playCard(hi) {
   if (!c || busy || pauseOpen || run.ov || c.dsel) return;
   const ci = c.hand[hi];
   if (!ci) return;
-  const d = eff(ci);
+  const d = eff(ci), echo5 = rl("r_fifth") && (c.tp || 0) === 4 && !c.inEcho;
   if (!canPlay(ci)) { const el = document.querySelector(`[data-a="play|${hi}"]`); if (el) { el.classList.remove("shake1"); void el.offsetWidth; el.classList.add("shake1"); } floatAt($("energy"), L("⚡ ไม่พอ", "⚡ not enough"), "bad"); return; }
   flyOut(ci); logBegin();
   c.en -= d.cost; c.hand.splice(hi, 1); delete ci.held;
@@ -2170,12 +2249,15 @@ function playCard(hi) {
   const tgt = c.foes[c.tgt], targets = d.all ? aliveFoes() : tgt && !tgt.dead ? [tgt] : [];
   if (d.dmg || d.slam) {
     let hits = d.hits || 1;
+    if (rl("r_sheath") && hits > 1) hits++;
     if (d.echo && Math.random() < d.echo) { hits++; floatAt($("pava"), "🔁 ECHO", "crit"); }
     for (let h = 0; h < hits; h++) for (const f of targets) {
       if (f.dead) continue;
       if (f.dodgeCh && Math.random() < f.dodgeCh) { floatAt(foeEl(f), "💨 Miss", "blk"); if (LA) LA.miss++; continue; }
       const crit = Math.random() < Math.min(0.9, run.st.crit + (d.critPlus || 0) + (c.critMod || 0) + (rl("r_lens") ? 0.1 : 0));
-      damageFoe(f, Math.floor(hitDmg(d, f) * (crit ? run.st.critMult : 1)), crit);
+      let dm = Math.floor(hitDmg(d, f) * (crit ? run.st.critMult + (setOn("s_keen") ? 0.5 : 0) : 1));
+      if (rl("r_dice") && d.tag === "gambler") dm = Math.round(dm * (1 + Math.random() * 0.6));
+      damageFoe(f, dm, crit);
       if (crit && PG().critDraw && !c.cdUsed) { c.cdUsed = true; drawCards(PG().critDraw); }
     }
   }
@@ -2197,12 +2279,13 @@ function playCard(hi) {
     const amt = Math.round(d.heal * tmul(d, "_blk")), h = Math.min(amt, run.maxHp - run.hp);
     run.hp += h; if (h) { floatAt($("pava"), "+" + h, "heal"); logX(`<span class="lgood">❤️+${h}</span>`); }
     if (PG().healToBlock && amt > h) c.block += amt - h;
+    if (rl("r_amulet")) { c.block += amt; logX("📿🛡️+" + amt); }
     if (PG().healToDmg && amt > h) hitRandom(amt - h);
   }
   if (d.tag && run.mode !== "pvp") gainMastery(d.tag, 1);
   if (d.type === "atk") {
     c.atks++;
-    if (rl("r_vamp") && run.hp < run.maxHp) { run.hp++; floatAt($("pava"), "🧛+1", "heal"); }
+    if (rl("r_vamp") && run.hp < run.maxHp) { const v = Math.min(setOn("s_night") ? 3 : 1, run.maxHp - run.hp); run.hp += v; floatAt($("pava"), "🧛+" + v, "heal"); }
     if (run.st.leech && run.hp < run.maxHp) { const h = Math.min(run.st.leech, run.maxHp - run.hp); run.hp += h; floatAt($("pava"), "+" + h, "heal"); }
   }
   if (d.handUp) c.handUp = (c.handUp || 0) + d.handUp;
@@ -2211,9 +2294,16 @@ function playCard(hi) {
   if (d.dump) { const rest = c.hand.splice(0); rest.forEach(discardCard); if (d.dumpDmg) for (let i = 0; i < rest.length; i++) hitRandom(Math.round(d.dumpDmg * (1 + run.st.atk) * tmul(d, "_atk"))); }
   if (d.draw) { drawCards(d.draw); logX("🃏+" + d.draw); }
   if (d.cost === 0 && PG().freeDraw && !c.fdUsed) { c.fdUsed = true; drawCards(PG().freeDraw); }
-  c.played = (c.played || 0) + 1;
-  (d.exhaust || d.type === "pow" ? c.exh : c.disc).push(ci);
+  c.played = (c.played || 0) + 1; c.tp = (c.tp || 0) + 1;
+  const pile = d.exhaust || d.type === "pow" ? c.exh : c.disc;
+  pile.push(ci);
   logEnd(`${d.ic} <b>${esc(cardName(ci))}</b>`, "p");
+  if (echo5 && run.hp > 0 && aliveFoes().length) { // Fifth Hand: the 5th card of the turn plays again for free
+    pile.splice(pile.lastIndexOf(ci), 1); c.hand.push(ci); c.en += d.cost; c.inEcho = true;
+    floatAt($("pava"), "🖐️ ×2", "crit");
+    try { playCard(c.hand.length - 1); } finally { c.inEcho = false; }
+    return;
+  }
   if (run.hp <= 0) return loseFight();
   if (!aliveFoes().length) return winFight();
   fixTarget();
@@ -2230,7 +2320,7 @@ const hitRandom = n => { const al = aliveFoes(); if (al.length && n > 0) damageF
 function discardCard(ci) {
   const c = run.combat, o = cardOf(ci).onDisc;
   flyOut(ci, $("piles").lastElementChild);
-  delete ci.held; c.disc.push(ci);
+  delete ci.held; c.disc.push(ci); c.discT = (c.discT || 0) + 1;
   if (PG().discBlock) c.block += PG().discBlock;
   if (o) {
     if (o.dmg) hitRandom(Math.round(o.dmg * (1 + run.st.atk) * tmul(cardOf(ci), "_atk")));
@@ -2288,7 +2378,7 @@ function damageFoe(f, dmg, crit) {
   floatAt(el, (crit ? "CRIT " : "") + (dmg - absorbed ? fmtN(dmg - absorbed) : "🛡️"), crit ? "crit" : "");
   animFoe(f, "hit");
   if (LA) { LA.d += dmg - absorbed; if (crit) LA.cr++; if (f.hp <= 0 && !f.dead) LA.kill.push(foeName(f)); }
-  if (f.hp <= 0 && !f.dead) { f.dead = true; animFoe(f, "die"); if (!f.pvp && PG().killEn) run.combat.en += PG().killEn; if (!f.pvp) { run.kills++; const xp = xpOf(f); run.combat.xpGot = (run.combat.xpGot || 0) + xp; gainCharXp(xp); } }
+  if (f.hp <= 0 && !f.dead) { f.dead = true; animFoe(f, "die"); if (!f.pvp && PG().killEn) run.combat.en += PG().killEn; if (!f.pvp && rl("r_skull")) run.hp = Math.min(run.maxHp, run.hp + 5); if (!f.pvp) { run.kills++; const xp = xpOf(f); run.combat.xpGot = (run.combat.xpGot || 0) + xp; gainCharXp(xp); } }
 }
 function hurtPlayer(dmg, pierce) {
   const c = run.combat;
@@ -2328,7 +2418,7 @@ async function foePhase(c) {
     if (run.combat !== c) { busy = false; return; } // the fight was left meanwhile
     f.block = 0;
     if (f.st.burn) {
-      logBegin(); damageFoe(f, f.st.burn + (PG().burnTick || 0), false); logEnd(`${foeDef(f).e} ${foeName(f)}`, "s", "🔥"); f.st.burn -= burnDecay(f.st.burn);
+      logBegin(); damageFoe(f, f.st.burn + (PG().burnTick || 0) + (setOn("s_inferno") ? 3 : 0), false); logEnd(`${foeDef(f).e} ${foeName(f)}`, "s", "🔥"); f.st.burn -= rl("r_orb") ? Math.ceil(burnDecay(f.st.burn) / 2) : burnDecay(f.st.burn);
       if (f.dead) { renderCombat(); continue; }
     }
     const m = intentOf(f), el = foeEl(f);
@@ -2345,8 +2435,8 @@ async function foePhase(c) {
     if (m.a) {
       animFoe(f, "lunge");
       for (let h = 0; h < (m.h || 1); h++) {
-        if (c.st.dodge > 0) { c.st.dodge--; if (LA) LA.dodge++; if (PG().dodgeCounter && !f.dead) damageFoe(f, PG().dodgeCounter, false); floatAt($("pava"), "🌬️ " + L("หลบ!", "Dodge!"), "blk"); continue; }
-        if (Math.random() < Math.min(0.9, run.st.dodge || 0)) { if (LA) LA.dodge++; if (PG().dodgeCounter && !f.dead) damageFoe(f, PG().dodgeCounter, false); floatAt($("pava"), "💨 Miss", "blk"); continue; }
+        if (c.st.dodge > 0) { c.st.dodge--; if (LA) LA.dodge++; if (rl("r_arrow")) c.drawNext = (c.drawNext || 0) + 1; if (PG().dodgeCounter && !f.dead) damageFoe(f, PG().dodgeCounter, false); floatAt($("pava"), "🌬️ " + L("หลบ!", "Dodge!"), "blk"); continue; }
+        if (Math.random() < Math.min(0.9, run.st.dodge || 0)) { if (LA) LA.dodge++; if (rl("r_arrow")) c.drawNext = (c.drawNext || 0) + 1; if (PG().dodgeCounter && !f.dead) damageFoe(f, PG().dodgeCounter, false); floatAt($("pava"), "💨 Miss", "blk"); continue; }
         const hadBlock = c.block > 0;
         hurtPlayer(foeHit(f, m));
         if (PG().blockThorns && hadBlock && !f.dead) damageFoe(f, PG().blockThorns, false);
@@ -2384,15 +2474,16 @@ function winFight() {
   if (Math.random() < gearCh) { const g = dropGear(); loot.push(`${g.ic} ${g.t} <small>(${L("เข้าคลังถาวร", "kept forever")})</small>`); }
   const potCh = kind === "boss" ? 0.5 : kind === "elite" ? 0.4 : kind === "fight" ? 0.15 : 0;
   if (Math.random() < potCh) { const l = gainPot(rollPot(kind === "boss" ? 0.4 : kind === "elite" ? 0.15 : 0.03)); if (l) loot.push(l); }
+  if (setOn("s_brew") || (rl("r_magnet") && Math.random() < 0.25)) { const l = gainPot(rollPot(0.05)); if (l) loot.push("🧲 " + l); }
   if (run.mode === "endless") loot.push(...endlessLoot(c, kind));
   else if (run.mode === "map") { // the Kingdom Map: elites may carry a relic; the Phoenix Plume works on act bosses
-    if (kind === "elite" && Math.random() < 0.35) { const r = rollRelics(1)[0]; if (r) { addRelic(r); loot.push(relicLoot(r)); } }
+    if (kind === "elite" && Math.random() < 0.35) { const r = rollRelics(1, "elite")[0]; if (r) { addRelic(r); loot.push(relicLoot(r)); } }
     if (kind === "boss" && rl("r_phoenix") && run.hp < run.maxHp) { run.hp = run.maxHp; loot.push(`🦅 ${L("ฟื้นเต็มหลอด", "Fully healed")}`); }
   }
   const w = kind === "boss" ? [0, 40, 60] : kind === "elite" ? [45, 42, 13] : [70, 27, 3];
   run.combat = null;
   run.ov = { k: "reward", title: kind === "boss" ? ["👑 ล้มบอสได้!", "👑 Boss defeated!"] : ["✔ ชนะ!", "✔ Victory!"], loot, cards: rollCards((rl("r_clover") ? 4 : 3) + (c.extraCard || 0), w) };
-  if (kind === "boss" && (run.mode === "endless" || (run.mode === "map" && run.act < ACTS))) { const ch = rollRelics(3); if (ch.length) run.ov = { k: "relic", choices: ch, next: run.ov }; } // a boss always offers a relic first
+  if (kind === "boss" && (run.mode === "endless" || (run.mode === "map" && run.act < ACTS))) { const ch = rollRelics(3, "boss"); if (ch.length) run.ov = { k: "relic", choices: ch, next: run.ov }; } // a boss always offers a relic first
   saveStore(); renderRun();
 }
 function loseFight() {
@@ -2681,6 +2772,7 @@ function renderOv() {
       `<div class="cardrow">${o.stock.map((s, i) => s.sold ? `<div class="hc sold"><div class="ci">✔</div></div>` : cardHtml({ id: s.id, up: 0 }, { cls: run.gold >= s.price ? "" : "no", attrs: ` data-a="buy|${i}"`, price: s.price, key: ++kn })).join("")}</div>` +
       `<div class="row" style="justify-content:center">` +
       shopPots(o).map((p, i) => `<button class="ghost" data-a="buypot|${i}" title="${esc(tr(potDef(p.id).d))}"${p.sold || run.gold < p.price || potsOf(run).length >= potCap() ? " disabled" : ""}><kbd>${++kn}</kbd>${potName(p.id)}${potDef(p.id).rare ? " ✨" : ""} · 💰 ${p.price}</button>`).join("") +
+      ((run.relics || []).some(id => relicDef(id).curse) && !o.curseDone ? `<button class="ghost" data-a="buycurse"${run.gold < (o.curseCost || 80) ? " disabled" : ""}><kbd>${++kn}</kbd>🕯️ ${L("ล้างคำสาป", "Lift a curse")} (${relicDef(run.relics.find(id => relicDef(id).curse)).ic}) · 💰 ${o.curseCost || 80}</button>` : "") +
       `<button class="ghost" data-a="buyrm"${o.rmDone || run.gold < run.rmCost || run.deck.length <= 5 ? " disabled" : ""}><kbd>${++kn}</kbd>✂️ ${L("ลบการ์ด", "Remove a card")} · 💰 ${run.rmCost}</button>` +
       `<button data-a="next"><kbd>${++kn}</kbd>${L("ออกจากร้าน ▶", "Leave ▶")}</button></div>`;
   } else if (o.k === "event") {
@@ -3307,6 +3399,7 @@ const ACTIONS = {
   },
   pickx: () => { run.ov = run.ov.back; saveStore(); renderOv(); },
   buy: i => { const o = run.ov, s = o.stock[+i]; if (!s || s.sold || run.gold < s.price) return; run.gold -= s.price; s.sold = true; run.deck.push({ id: s.id, up: 0, u: newUid() }); saveStore(); renderRun(); },
+  buycurse: () => { const o = run.ov, id = (run.relics || []).find(x => relicDef(x).curse), cost = o.curseCost || 80; if (!id || o.curseDone || run.gold < cost) return; run.gold -= cost; o.curseDone = true; removeRelic(id); saveStore(); renderRun(); },
   buypot: i => { const o = run.ov, p = shopPots(o)[+i || 0]; if (!p || p.sold || run.gold < p.price || potsOf(run).length >= potCap()) return; run.gold -= p.price; p.sold = true; run.pots.push(p.id); saveStore(); renderRun(); },
   buyrm: () => { const o = run.ov; if (o.rmDone || run.gold < run.rmCost) return; run.gold -= run.rmCost; run.rmCost += 25; run.ov = { k: "pick", mode: "rm", back: o }; saveStore(); renderOv(); },
   evc: i => {

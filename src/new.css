@@ -670,3 +670,33 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
 .potslot.empty { border: 2px dashed var(--line); }
 #mshop .shop .item .potadd { flex: none; padding: 4px 10px; font-size: 16px; margin-left: 4px; }
 @media (max-width: 560px) { .potpop { position: fixed; left: 12px; right: 12px; top: 56px; width: auto; } }
+/* relic tiers, sets and the Relic Book */
+.relic.t-c { border-color: #b8b8c8; background: #b8b8c80d; }
+.relic.t-r { border-color: #4da3ff; background: #4da3ff10; }
+.relic.t-b { border-color: var(--gold); background: #f5c54214; box-shadow: 0 0 12px #f5c54233; }
+.rtier { font-size: 10px; font-weight: 700; letter-spacing: .04em; padding: 0 7px; border-radius: 999px; border: 1px solid currentColor; }
+.rtier.t-c { color: #b8b8c8; } .rtier.t-r { color: #6db5ff; } .rtier.t-b { color: var(--gold); } .rtier.curse { color: #c79bff; }
+.relic .rset { font-size: 11px; color: #8ef0a6; border-top: 1px dashed var(--line); padding-top: 4px; margin-top: 2px; }
+.rlic.rsetic { filter: drop-shadow(0 0 4px #8ef0a6); }
+.ovbox.codex { width: min(980px, calc(100vw - 24px)); max-height: calc(var(--gh, 100vh) - 24px); overflow-y: auto; scrollbar-width: thin; text-align: left; }
+.ovbox.codex .big, .ovbox.codex > .sub { text-align: center; }
+.cxh { font-weight: 700; margin: 14px 0 4px; color: var(--text); }
+.cxh small { color: var(--dim); font-weight: 400; margin-left: 6px; }
+.relgrid.cx { grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr)); gap: 8px; margin: 6px 0; max-width: none; }
+.relgrid.cx .relic { cursor: default; padding: 8px 6px; }
+.relgrid.cx .relic:hover { transform: none; }
+.relgrid.cx .relic .ri { font-size: 26px; }
+.relgrid.cx .relic small { font-size: 11px; color: var(--dim); }
+.relic.unseen { opacity: .5; border-style: dashed; }
+.cxsets { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 8px; }
+.cxset { display: flex; gap: 8px; align-items: center; border: 1px solid #8ef0a666; border-radius: 10px; padding: 6px 10px; background: #8ef0a60d; }
+.cxset > span { font-size: 24px; }
+.cxset .d { font-size: 12px; color: var(--dim); }
+.cxset.off { opacity: .5; filter: grayscale(.7); }
+.ovbox.codex { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; max-width: 980px; }
+@media (max-width: 560px) {
+  .relgrid.cx { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .relgrid.cx .relic { padding: 6px 4px; }
+  .relgrid.cx .relic .ri { font-size: 22px; }
+  .ovbox.codex { padding: 10px 8px; }
+}
