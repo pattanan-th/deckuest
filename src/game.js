@@ -62,7 +62,7 @@ function rerender() {
 }
 
 // version shown small on the home / profile screens and in the pause menu; bump it with every release
-const GAME_VER = "1.15.0";
+const GAME_VER = "1.16.0";
 
 // ================= cards =================
 // type: atk (attack) | skl (skill) | pow (power: stays in play for the fight). r: 0 starter/weapon, 1 common, 2 uncommon, 3 rare.
@@ -354,9 +354,38 @@ const ACCESSORIES = [
   { id: "s_iron", type: "shoes", req: { vit: 8 }, ic: "🥾", t: "Iron Greaves", price: 600, hp: 15, def: 0.04 },
   { id: "s_wind", type: "shoes", req: { agi: 10 }, ic: "👟", t: "Wind Boots", price: 680, drawFirst: 1, combo: 0.02 },
 ];
-const MITEMS = [
-  { id: "potion", ic: "🧪", t: "Potion", price: 45, d: { th: "พกเข้า run สูงสุด 3 ขวด (ขวดที่ไม่ได้ใช้คืนคลังตอนจบ) · ตอนสู้แตะ 🧪 เพื่อฟื้น 30% HP", en: "Up to 3 go into each run (unused ones come back) · tap 🧪 in a fight to heal 30% HP" } },
+// potions: a run carries them in slots (3, or 5 with the Potion Belt); unused ones go back to the bag when the run ends.
+// any: also usable outside fights · auto: works by itself · noPvp: no effect in a duel · rare: found only (elites, bosses, shops in a run)
+const potMul = () => 1 + (run && run.st && pLv("alch") ? PF.alch(pLv("alch")) / 0.3 : 0); // Alchemist makes every potion stronger
+const POTIONS = [
+  { id: "potion", ic: "🧪", t: ["ยาฟื้นพลัง", "Healing Potion"], price: 45, any: 1, d: ["ฟื้น 30% HP (ใช้นอกไฟต์ได้)", "Heal 30% HP (works outside fights too)"],
+    use: () => { const h = Math.min(run.maxHp - run.hp, Math.round(run.maxHp * (0.3 + (pLv("alch") ? PF.alch(pLv("alch")) : 0)))); run.hp += h; logX(`<span class="lgood">❤️+${h}</span>`); return "+" + h; } },
+  { id: "p_energy", ic: "⚡", t: ["ยาชูกำลัง", "Energy Tonic"], price: 60, d: ["+2⚡ เทิร์นนี้", "+2⚡ this turn"], use: () => { run.combat.en += 2; logX("⚡+2"); return "⚡+2"; } },
+  { id: "p_draw", ic: "🃏", t: ["ยาตาทิพย์", "Insight Draught"], price: 55, d: ["จั่วการ์ด 3 ใบ", "Draw 3 cards"], use: () => { drawCards(3); logX("🃏+3"); return "🃏+3"; } },
+  { id: "p_iron", ic: "🛡️", t: ["ยาผิวเหล็ก", "Iron Elixir"], price: 55, d: ["Block 10 + 15% ของ Max HP", "Block 10 + 15% of Max HP"],
+    use: () => { const b = Math.round((10 + run.maxHp * 0.15) * potMul()); run.combat.block += b; logX("🛡️+" + b); return "🛡️+" + b; } },
+  { id: "p_rage", ic: "💪", t: ["ยาโทสะ", "Rage Potion"], price: 70, d: ["Strength +3 ทั้งไฟต์", "+3 Strength for the fight"], use: () => { run.combat.st.str += 3; logX("💪+3"); return "💪+3"; } },
+  { id: "p_fire", ic: "🔥", t: ["ขวดไฟ", "Fire Flask"], price: 60, d: ["Burn 6 + 6% ของ Max HP ใส่ศัตรูทุกตัว", "Burn 6 + 6% of Max HP on every enemy"],
+    use: () => { const n = Math.round((6 + run.maxHp * 0.06) * potMul()); aliveFoes().forEach(f => f.st.burn += n); logX("🔥 " + n); return "🔥" + n; } },
+  { id: "p_frost", ic: "🧊", t: ["ขวดน้ำแข็ง", "Frost Vial"], price: 50, d: ["ศัตรูทุกตัวติด Weak 2", "Weak 2 on every enemy"], use: () => { aliveFoes().forEach(f => f.st.weak += 2); logX("🥀 Weak 2"); return "🧊"; } },
+  { id: "p_clean", ic: "🧼", t: ["ยาชำระล้าง", "Cleansing Tonic"], price: 45, d: ["ลบ Weak / Vuln / Burn / ซีล ออกจากตัวเรา และฟื้น 10% HP", "Remove your Weak / Vuln / Burn / seal and heal 10% HP"],
+    use: () => { const c = run.combat; c.st.weak = 0; c.st.vuln = 0; c.st.burn = 0; c.seal = null; const h = Math.min(run.maxHp - run.hp, Math.round(run.maxHp * 0.1 * potMul())); run.hp += h; logX("✨ " + L("ล้างดีบัฟ", "cleansed")); return "✨+" + h; } },
+  { id: "p_phoenix", ic: "🪶", t: ["น้ำตาฟีนิกซ์", "Phoenix Tear"], rare: 1, auto: 1, price: 130, d: ["อัตโนมัติ: HP หมดแล้วฟื้น 50% (แล้วขวดแตก)", "Automatic: when your HP hits 0, revive at 50% (then it breaks)"] },
+  { id: "p_lucky", ic: "🍀", t: ["ยาโชคดี", "Lucky Brew"], rare: 1, noPvp: 1, price: 110, d: ["ชนะไฟต์นี้: ทอง ×2 และการ์ดให้เลือก +1 ใบ", "Win this fight: gold ×2 and one more card to pick from"],
+    use: () => { const c = run.combat; c.goldX = (c.goldX || 1) * 2; c.extraCard = (c.extraCard || 0) + 1; logX("💰×2 🃏+1"); return "🍀"; } },
+  { id: "p_time", ic: "⏳", t: ["ทรายเวลา", "Time Sand"], rare: 1, noPvp: 1, price: 140, d: ["จบเทิร์นนี้แล้วศัตรูข้ามตา ได้เล่นอีกเทิร์นทันที", "After this turn the enemies skip theirs: you go again"],
+    use: () => { run.combat.skipFoe = true; logX("⏳ " + L("ศัตรูจะข้ามตา", "enemies will skip")); return "⏳"; } },
 ];
+const potDef = id => POTIONS.find(p => p.id === id) || POTIONS[0];
+const MITEMS = POTIONS.filter(p => !p.rare).map(p => ({ id: p.id, ic: p.ic, t: tr(p.t), price: p.price, d: { th: p.d[0], en: p.d[1] } }));
+const potsOf = r => { if (!r.pots) { r.pots = Array(Math.max(0, r.potions || 0)).fill("potion"); delete r.potions; } return r.pots; }; // old saves counted heal potions
+function bankPots(pr, r) { if (!r) return; for (const id of potsOf(r)) pr.inv[id] = (pr.inv[id] || 0) + 1; r.pots = []; }
+const POT_LOAD = 3;
+function potLoadOf(pr) { // the potions the next run takes: the chosen loadout, limited to what is owned
+  const want = pr.potLoad || Array(POT_LOAD).fill("potion"), used = {}, out = [];
+  for (const id of want) { if (out.length >= POT_LOAD) break; used[id] = (used[id] || 0) + 1; if ((pr.inv[id] || 0) >= used[id]) out.push(id); }
+  return out;
+}
 
 const RARITY = [
   { n: "Common", c: "#b8b8c8", m: 1 }, { n: "Uncommon", c: "#5bd16b", m: 1.25 }, { n: "Rare", c: "#4da3ff", m: 1.5 },
@@ -517,7 +546,7 @@ const PASSIVES = [
   { id: "keen", ic: "🗡️", t: "Keen Edge", tier: 0, d: lv => ({ th: `การ์ดโจมตีดาเมจ +${PF.keen(lv)} ต่อครั้ง`, en: `Attacks deal +${PF.keen(lv)} damage per hit` }) },
   { id: "thrifty", ic: "🪙", t: "Thrifty", tier: 0, d: lv => ({ th: `ทองที่ได้ใน run +${pc(PF.thrifty(lv))}%`, en: `+${pc(PF.thrifty(lv))}% gold in runs` }) },
   { id: "recycle", ic: "♻️", t: "Scrap Toss", tier: 0, d: lv => ({ th: `ทุกใบที่ทิ้งจากมือ: ดาเมจ ${PF.recycle(lv)} ใส่ศัตรูสุ่ม`, en: `Each card discarded from hand deals ${PF.recycle(lv)} damage to a random enemy` }) },
-  { id: "alch", ic: "⚗️", t: "Alchemist", tier: 0, d: lv => ({ th: `ยาฟื้นเพิ่ม +${pc(PF.alch(lv))}% HP`, en: `Potions heal +${pc(PF.alch(lv))}% more HP` }) },
+  { id: "alch", ic: "⚗️", t: "Alchemist", tier: 0, d: lv => ({ th: `ยาฟื้นเพิ่ม +${pc(PF.alch(lv))}% HP · ยาอื่นแรงขึ้น +${pc(PF.alch(lv) / 0.3)}%`, en: `Potions heal +${pc(PF.alch(lv))}% more HP · other potions +${pc(PF.alch(lv) / 0.3)}% stronger` }) },
   { id: "mend", ic: "🌬️", t: "Second Wind", tier: 1, d: lv => ({ th: `ชนะไฟต์ฟื้น ${PF.mend(lv)} HP`, en: `Heal ${PF.mend(lv)} HP after each won fight` }) },
   { id: "quick", ic: "🤲", t: "Quick Hands", tier: 1, d: lv => ({ th: `เทิร์นแรกจั่ว +1 · เทิร์นอื่นมีโอกาส ${pc(PF.quick(lv))}% จั่ว +1`, en: `Turn 1: draw +1 · later turns ${pc(PF.quick(lv))}% chance to draw +1` }) },
   { id: "momentum", ic: "🔥", t: "Momentum", tier: 1, d: lv => ({ th: `Combo +${pc(PF.momentum(lv))}% ต่อการ์ดโจมตีใบก่อนหน้าในเทิร์น`, en: `Combo +${pc(PF.momentum(lv))}% per earlier attack this turn` }) },
@@ -973,7 +1002,7 @@ function ensureProfile(pr) {
   for (const s of ACC_SLOTS) { const a = pr.acc[s.type] || []; pr.acc[s.type] = Array.from({ length: s.n }, (_, i) => a[i] ?? null); }
   pr.hands = pr.hands.map(u => u && itemBy(pr, u) && isHandId(itemBy(pr, u).id) ? u : null);
   if (twoHanded(pr)) pr.hands[1] = null;
-  if (pr.run && pr.run.v !== RUN_V) { pr.gold += pr.run.gold || 0; pr.inv.potion = (pr.inv.potion || 0) + (pr.run.potions || 0); pr.run = null; } // an older run can't be resumed: bank it
+  if (pr.run && pr.run.v !== RUN_V) { pr.gold += pr.run.gold || 0; bankPots(pr, pr.run); pr.run = null; } // an older run can't be resumed: bank it
   return pr;
 }
 // saves from before classes: re-map items and mastery, refund every stat point for a free re-spec
@@ -1395,7 +1424,7 @@ const NET = {
 // ---- room flow ----
 function pvpOpen() {
   if (pv) NET.close();
-  pv = { role: null, phase: "menu", code: "", cfg: { mode: "A", hp: 1.5 }, ready: false, oready: false, opub: null, opp: null, build: null, sel: null, msg: "", gone: false };
+  pv = { role: null, phase: "menu", code: "", cfg: { mode: "A", hp: 1.5, pot: false }, ready: false, oready: false, opub: null, opp: null, build: null, sel: null, msg: "", gone: false };
   renderPv();
 }
 function pvpExit() {
@@ -1517,8 +1546,8 @@ function pvpMsg(m) {
     if (pv.cfg.mode === "B") pvpEnsureDeck();
     NET.send({ t: "cfg", cfg: pv.cfg, who: pvpWho(), ver: GAME_VER }); renderPv();
   } else if (m.t === "cfg" && pv.role === "guest" && m.cfg) {
-    const cfg = { mode: PV_MODES.some(x => x.id === m.cfg.mode) ? m.cfg.mode : "A", hp: PV_HP.includes(+m.cfg.hp) ? +m.cfg.hp : 1.5 };
-    const changed = cfg.mode !== pv.cfg.mode || cfg.hp !== pv.cfg.hp;
+    const cfg = { mode: PV_MODES.some(x => x.id === m.cfg.mode) ? m.cfg.mode : "A", hp: PV_HP.includes(+m.cfg.hp) ? +m.cfg.hp : 1.5, pot: !!m.cfg.pot };
+    const changed = cfg.mode !== pv.cfg.mode || cfg.hp !== pv.cfg.hp || cfg.pot !== pv.cfg.pot;
     pv.cfg = cfg; pv.opp = pvpWhoIn(m.who); pv.over = String(m.ver || "?").slice(0, 12);
     if (pv.phase === "join" || pv.phase === "wait") pv.phase = "lobby";
     if (changed) { pv.ready = false; pv.build = null; pv.oready = false; pv.opub = null; }
@@ -1539,7 +1568,7 @@ function pvpMsg(m) {
 function pvpStart(first) {
   const b = pv.build, op = pv.opub, who = pv.opp || { name: "?", avatar: "🧑" };
   pv.phase = "duel"; closePause();
-  run = { v: RUN_V, mode: "pvp", st: b.st, hp: b.hp, maxHp: b.hp, gold: 0, deck: b.ids.map(id => ({ id, up: 0, u: newUid() })), potions: 0, act: 1, floor: 0, depth: 0, kills: 0, found: [], gained: 0,
+  run = { v: RUN_V, mode: "pvp", st: b.st, hp: b.hp, maxHp: b.hp, gold: 0, deck: b.ids.map(id => ({ id, up: 0, u: newUid() })), pots: pv.cfg.pot ? potLoadOf(prof()) : [], act: 1, floor: 0, depth: 0, kills: 0, found: [], gained: 0,
     map: null, pos: null, path: [], doors: null, combat: null, ov: null, node: null, ch: null, step: 0, rmCost: 0 }; // never stored in the profile
   const foe = { id: "_pvp", pvp: true, name: who.name, av: who.avatar, hp: op.hp, maxHp: op.hp, block: op.block, st: { str: 0, weak: 0, vuln: 0, burn: 0, dodge: op.dodge }, dmgS: 1, elite: false, boss: false, mi: 0, dead: false };
   run.combat = { kind: "pvp", foes: [foe], draw: shuffle(run.deck.map(c => ({ ...c }))), hand: [], disc: [], exh: [], en: 0, turn: 0, block: b.block, st: { str: 0, weak: 0, vuln: 0, burn: 0, dodge: b.dodge }, bpt: 0, dpt: 0, atks: 0, played: 0, tgt: 0, hits: [], base: null };
@@ -1631,7 +1660,8 @@ function pvpEsc() { if (pv && pv.phase === "duel") return; pvpExit(); }
 function pvCfgHtml(edit) {
   const dis = edit ? "" : " disabled";
   return `<div class="pvrow">${PV_MODES.map(m => `<button class="pvopt${pv.cfg.mode === m.id ? "" : " ghost"}" data-a="pvm|${m.id}"${dis}><b>${m.ic} ${tr(m.t)}</b><small>${tr(m.d)}</small></button>`).join("")}</div>` +
-    `<div class="row" style="justify-content:center;gap:8px;align-items:center"><span class="sub" style="margin:0">❤️ ${L("เลือดสูงสุด", "Max HP")}</span>${PV_HP.map(h => `<button class="${pv.cfg.hp === h ? "" : "ghost"}" data-a="pvh|${h}"${dis}>×${h}</button>`).join("")}</div>`;
+    `<div class="row" style="justify-content:center;gap:8px;align-items:center"><span class="sub" style="margin:0">❤️ ${L("เลือดสูงสุด", "Max HP")}</span>${PV_HP.map(h => `<button class="${pv.cfg.hp === h ? "" : "ghost"}" data-a="pvh|${h}"${dis}>×${h}</button>`).join("")}</div>` +
+    `<div class="row" style="justify-content:center;gap:8px;align-items:center"><span class="sub" style="margin:0">🧪 ${L("ยาที่พก", "Potions")}</span>${[[0, L("ปิด", "Off")], [1, L("เปิด", "On")]].map(([v, n]) => `<button class="${!!pv.cfg.pot === !!v ? "" : "ghost"}" data-a="pvpot|${v}"${dis}>${n}</button>`).join("")}</div>`;
 }
 function renderPv() {
   if (!pv) return;
@@ -1685,10 +1715,10 @@ const MAP_ROWS = 11, LANES = 5, ROOMS_PER_ACT = 6, ACTS = 3;
 
 function newRun(mode, ch, deckIds) {
   const pr = prof(), st = statsOf(pr);
-  const potions = Math.min(3, pr.inv.potion || 0);
-  pr.inv.potion = (pr.inv.potion || 0) - potions;
+  const pots = potLoadOf(pr);
+  for (const id of pots) pr.inv[id]--;
   const deck = (deckIds ? [...st.cards, ...deckIds] : [...Array(5).fill("strike"), ...Array(4).fill("defend"), ...st.cards]).map(id => ({ id, up: 0, u: newUid() }));
-  run = pr.run = { v: RUN_V, mode, st, hp: st.hp, maxHp: st.hp, gold: 0, deck, potions, act: 1, floor: 0, depth: 0, kills: 0, found: [], gained: 0,
+  run = pr.run = { v: RUN_V, mode, st, hp: st.hp, maxHp: st.hp, gold: 0, deck, pots, act: 1, floor: 0, depth: 0, kills: 0, found: [], gained: 0,
     map: null, pos: null, path: [], doors: null, combat: null, ov: null, node: null, ch: ch ?? null, step: 0, rmCost: 75 };
   pr.stats.runs++;
   if (mode === "map") run.map = genMap();
@@ -1811,7 +1841,7 @@ function dropGear() {
 function treasure() {
   const act = runAct(), gold = gainGold(35 + Math.floor(Math.random() * 30) + 15 * (act - 1)), loot = [`💰 +${gold}`];
   if (Math.random() < 0.35) { const g = dropGear(); loot.push(`${g.ic} ${g.t}`); }
-  else if (run.potions < potCap()) { run.potions++; loot.push("🧪 Potion"); }
+  else { const l = gainPot(rollPot(0.1)); if (l) loot.push(l); }
   if (relicMode() && Math.random() < 0.3) { const r = rollRelics(1)[0]; if (r) { addRelic(r); loot.push(relicLoot(r)); } }
   return { k: "loot", title: [NODE.treasure.ic + " " + NODE.treasure.t[0], NODE.treasure.ic + " " + NODE.treasure.t[1]], loot };
 }
@@ -1819,7 +1849,7 @@ function genShop() {
   const act = runAct(), m = 1 + 0.1 * (act - 1);
   const ids = [...rollCards(3, [100, 0, 0]), ...rollCards(1, [0, 100, 0]), ...rollCards(1, [0, 0, 100])];
   const base = [0, 50, 75, 150];
-  return { k: "shop", stock: [...new Set(ids)].map(id => ({ id, price: Math.round(base[CARDS[id].r] * m * (0.9 + Math.random() * 0.2)), sold: false })), potion: { price: 50, sold: false }, rmDone: false };
+  return { k: "shop", stock: [...new Set(ids)].map(id => ({ id, price: Math.round(base[CARDS[id].r] * m * (0.9 + Math.random() * 0.2)), sold: false })), pots: [rollPot(0.15), rollPot(0.15)].map(id => ({ id, price: Math.round((potDef(id).rare ? 130 : 50) * m), sold: false })), rmDone: false };
 }
 const healRun = share => { const h = Math.max(1, Math.round(run.maxHp * share)); const before = run.hp; run.hp = Math.min(run.maxHp, run.hp + h); return run.hp - before; };
 function upgradeRandom(n) {
@@ -1916,7 +1946,7 @@ const RELICS = [
   { id: "r_hourglass", ic: "⏳", t: ["นาฬิกาทราย", "Hourglass"], d: ["Block ที่เหลือเก็บไว้ครึ่งหนึ่งข้ามเทิร์น", "Keep half your Block between turns"] },
   { id: "r_feather", ic: "🪶", t: ["ขนนกลม", "Wind Feather"], d: ["เริ่มทุกไฟต์ด้วยหลบ 1", "Start every fight with 1 Dodge"] },
   { id: "r_bag", ic: "🎒", t: ["กระเป๋าก้นลึก", "Bottomless Bag"], d: ["ถือการ์ดได้ +1 ใบ", "Hand limit +1"] },
-  { id: "r_belt", ic: "🧪", t: ["เข็มขัดยา", "Potion Belt"], d: ["พกยาได้ 5 ขวด · ได้ยาทันที 1 ขวด", "Carry 5 potions · get one now"], on: () => { run.potions = Math.min(potCap(), run.potions + 1); } },
+  { id: "r_belt", ic: "🧪", t: ["เข็มขัดยา", "Potion Belt"], d: ["พกยาได้ 5 ขวด · ได้ยาทันที 1 ขวด", "Carry 5 potions · get one now"], on: () => { if (potsOf(run).length < potCap()) run.pots.push("potion"); } },
   { id: "r_clover", ic: "🍀", t: ["ใบโคลเวอร์", "Four-Leaf Clover"], d: ["รางวัลการ์ดมีให้เลือก 4 ใบ", "Card rewards offer 4 choices"] },
   { id: "r_phoenix", ic: "🦅", t: ["ขนฟีนิกซ์", "Phoenix Plume"], d: ["ล้มบอสแล้วฟื้นเลือดเต็ม", "Fully heal after beating a boss"] },
   { id: "r_anvil", ic: "⚒️", t: ["ทั่งพกพา", "Pocket Anvil"], d: ["ได้ทันที: อัปเกรดการ์ดสุ่ม 3 ใบ", "Now: upgrade 3 random cards"], on: () => upgradeRandom(3) },
@@ -1933,6 +1963,15 @@ const relicDef = id => RELICS.find(r => r.id === id) || CURSES.find(r => r.id ==
 const relicMode = () => !!run && (run.mode === "endless" || run.mode === "map");
 const rl = id => !!(run && run.relics && run.relics.includes(id));
 const potCap = () => rl("r_belt") ? 5 : 3;
+const potName = id => { const p = potDef(id); return `${p.ic} ${tr(p.t)}`; };
+function rollPot(rareCh) { // heal potions are the most common find
+  const rare = Math.random() < (rareCh || 0), pool = POTIONS.filter(p => !!p.rare === rare).flatMap(p => p.id === "potion" ? [p.id, p.id, p.id] : [p.id]);
+  return rand(pool);
+}
+function gainPot(id) { // into a free slot; null when the belt is full
+  if (potsOf(run).length >= potCap()) return null;
+  run.pots.push(id); return potName(id) + (potDef(id).rare ? " ✨" : "");
+}
 function addRelic(id) { const d = relicDef(id); if (!d || rl(id)) return; (run.relics = run.relics || []).push(id); if (d.on) d.on(); }
 function removeRelic(id) { const d = relicDef(id); if (!rl(id)) return; run.relics = run.relics.filter(x => x !== id); if (d.off) d.off(); }
 const rollRelics = (n, rare) => shuffle(RELICS.filter(r => !rl(r.id) && (rare || !r.rare)).map(r => r.id)).slice(0, n);
@@ -2257,6 +2296,7 @@ function hurtPlayer(dmg, pierce) {
   if (!pierce) { const a = Math.min(c.block, rest); c.block -= a; rest -= a; }
   run.hp = Math.max(0, run.hp - rest);
   if (LA) { LA.hurt += rest; LA.blk += dmg - rest; }
+  if (run.hp <= 0 && run.pots && run.pots.includes("p_phoenix") && !(PG().ward && !c.wardUsed)) { run.pots.splice(run.pots.indexOf("p_phoenix"), 1); run.hp = Math.max(1, Math.ceil(run.maxHp * 0.5)); logX("🪶"); floatAt($("pava"), "🪶 " + L("ฟีนิกซ์!", "Phoenix!"), "heal"); }
   if (run.hp <= 0 && PG().ward && !c.wardUsed) { c.wardUsed = true; logX("👼"); run.hp = Math.max(1, Math.ceil(run.maxHp * 0.3)); floatAt($("pava"), "👼 " + L("โอกาสที่สอง!", "Second Chance!"), "heal"); }
   floatAt($("pava"), rest ? "-" + rest : "🛡️", rest ? "bad" : "blk");
   if (rest) { const g = $("game"); g.classList.remove("shake"); void g.offsetWidth; g.classList.add("shake"); $("flash").style.opacity = .3; setTimeout(() => $("flash").style.opacity = 0, 120); }
@@ -2280,8 +2320,10 @@ async function foePhase(c) {
   if (c.st.weak) c.st.weak--;
   if (c.st.vuln) c.st.vuln--;
   renderCombat();
+  const frozen = c.skipFoe; c.skipFoe = false;
+  if (frozen) logPush("⏳ " + L("เวลาหยุด: ศัตรูข้ามตา", "Time stops: the enemies skip their turn"), "s");
   for (const f of c.foes) {
-    if (f.dead) continue;
+    if (f.dead || frozen) continue;
     await wait(380);
     if (run.combat !== c) { busy = false; return; } // the fight was left meanwhile
     f.block = 0;
@@ -2340,8 +2382,8 @@ function winFight() {
   if (heal > 0) { run.hp += heal; loot.push(`❤️ +${heal}`); }
   const gearCh = kind === "boss" ? 1 : kind === "elite" ? 0.3 : 0.04;
   if (Math.random() < gearCh) { const g = dropGear(); loot.push(`${g.ic} ${g.t} <small>(${L("เข้าคลังถาวร", "kept forever")})</small>`); }
-  const potCh = kind === "elite" ? 0.4 : kind === "fight" ? 0.15 : 0;
-  if (run.potions < potCap() && Math.random() < potCh) { run.potions++; loot.push("🧪 Potion"); }
+  const potCh = kind === "boss" ? 0.5 : kind === "elite" ? 0.4 : kind === "fight" ? 0.15 : 0;
+  if (Math.random() < potCh) { const l = gainPot(rollPot(kind === "boss" ? 0.4 : kind === "elite" ? 0.15 : 0.03)); if (l) loot.push(l); }
   if (run.mode === "endless") loot.push(...endlessLoot(c, kind));
   else if (run.mode === "map") { // the Kingdom Map: elites may carry a relic; the Phoenix Plume works on act bosses
     if (kind === "elite" && Math.random() < 0.35) { const r = rollRelics(1)[0]; if (r) { addRelic(r); loot.push(relicLoot(r)); } }
@@ -2349,7 +2391,7 @@ function winFight() {
   }
   const w = kind === "boss" ? [0, 40, 60] : kind === "elite" ? [45, 42, 13] : [70, 27, 3];
   run.combat = null;
-  run.ov = { k: "reward", title: kind === "boss" ? ["👑 ล้มบอสได้!", "👑 Boss defeated!"] : ["✔ ชนะ!", "✔ Victory!"], loot, cards: rollCards(rl("r_clover") ? 4 : 3, w) };
+  run.ov = { k: "reward", title: kind === "boss" ? ["👑 ล้มบอสได้!", "👑 Boss defeated!"] : ["✔ ชนะ!", "✔ Victory!"], loot, cards: rollCards((rl("r_clover") ? 4 : 3) + (c.extraCard || 0), w) };
   if (kind === "boss" && (run.mode === "endless" || (run.mode === "map" && run.act < ACTS))) { const ch = rollRelics(3); if (ch.length) run.ov = { k: "relic", choices: ch, next: run.ov }; } // a boss always offers a relic first
   saveStore(); renderRun();
 }
@@ -2359,13 +2401,34 @@ function loseFight() {
   if (run.mode === "story") { run.combat = null; run.ov = { k: "storyfail" }; saveStore(); return renderRun(); }
   endRun(false);
 }
-function usePotion() {
-  if (!run || !run.potions || busy || run.hp >= run.maxHp) return;
-  run.potions--;
-  const h = Math.min(run.maxHp - run.hp, Math.round(run.maxHp * (0.3 + (pLv("alch") ? PF.alch(pLv("alch")) : 0))));
-  run.hp += h;
-  floatAt(state === "combat" ? $("pava") : $("rhead"), "🧪 +" + h, "heal");
-  saveStore(); renderRun();
+const shopPots = o => o.pots || (o.pots = o.potion ? [{ id: "potion", price: o.potion.price, sold: o.potion.sold }] : []); // older saved shops had one heal potion
+let potSel = null; // the potion slot whose little menu is open
+function potWhy(id) { // why it can't be used now ("" = it can)
+  const p = potDef(id), c = run && run.combat;
+  if (p.auto) return L("ทำงานเองอัตโนมัติ", "Works by itself");
+  if (!c) return p.any ? (run.hp >= run.maxHp ? L("HP เต็มแล้ว", "HP is full") : "") : L("ใช้ได้ตอนต่อสู้", "Only in a fight");
+  if (run.mode === "pvp" && p.noPvp) return L("ใช้ใน PvP ไม่ได้", "Not in PvP");
+  if (busy || c.dsel) return L("รอตาของเรา", "Wait for your turn");
+  if (id === "potion" && run.hp >= run.maxHp) return L("HP เต็มแล้ว", "HP is full");
+  return "";
+}
+function potOpen(i) { if (!run || !potsOf(run)[i]) { potSel = null; } else potSel = potSel === i ? null : i; rerunHead(); }
+function rerunHead() { if (!run) return; if (run.combat) renderCombat(); else $("rhead").innerHTML = headHtml(); }
+function potDrop(i) { if (!run || !potsOf(run)[i] || busy) return; run.pots.splice(i, 1); potSel = null; saveStore(); rerunHead(); }
+function usePot(i) {
+  if (!run) return;
+  const id = potsOf(run)[i];
+  if (!id || potWhy(id)) return;
+  run.pots.splice(i, 1); potSel = null;
+  logBegin(); const fx = potDef(id).use(); logEnd(`${potDef(id).ic} <b>${esc(tr(potDef(id).t))}</b>`, "p");
+  floatAt(state === "combat" ? $("pava") : $("rhead"), potDef(id).ic + " " + (fx || ""), "heal");
+  if (run.combat && !aliveFoes().length) return winFight();
+  saveStore(); rerunHead();
+}
+function usePotion() { // the Q key: open the first potion's menu, press again to use it
+  if (!run || !potsOf(run).length) return;
+  if (potSel != null) return usePot(potSel);
+  potOpen(0);
 }
 
 // ---------- end of a run ----------
@@ -2374,7 +2437,7 @@ function endRun(won, quiet) {
   const pr = prof(), r = pr.run;
   if (!r) return;
   pr.gold += r.gold;
-  pr.inv.potion = (pr.inv.potion || 0) + r.potions;
+  bankPots(pr, r);
   pr.stats.kills = (pr.stats.kills || 0) + r.kills;
   if (won) pr.stats.wins++;
   const b = pr.stats.best;
@@ -2413,14 +2476,42 @@ function openRun() {
   renderRun();
 }
 function headHtml() {
-  if (run.mode === "pvp") return `<span>⚔️ <b>PvP · ${esc(pv && pv.opp ? pv.opp.name : "")}</b></span><span>❤️ <b>${run.hp}/${run.maxHp}</b></span><span class="sp"></span><button class="ghost" data-a="deck">🃏 ${run.deck.length}</button><button class="ghost" data-a="pause">⏸</button>`;
+  if (run.mode === "pvp") return `<span>⚔️ <b>PvP · ${esc(pv && pv.opp ? pv.opp.name : "")}</b></span><span>❤️ <b>${run.hp}/${run.maxHp}</b></span>${potsOf(run).length ? potSlotsHtml() : ""}<span class="sp"></span><button class="ghost" data-a="deck">🃏 ${run.deck.length}</button><button class="ghost" data-a="pause">⏸</button>`;
   const md = modeOf(run.mode);
   const z = run.mode === "endless" && zoneOf(Math.max(1, run.floor));
   const where = run.mode === "story" ? EPISODE.chapters[run.ch].n : run.mode === "endless" ? `${z.ic} ${L("ชั้น ", "Floor ")}${run.floor}` + (run.combat && run.mods && run.mods.length ? " " + run.mods.map(modChip).join("") : "") + (run.relics && run.relics.length ? ` <span class="rlist">${relicIcons()}</span>` : "")
     : run.mode === "rooms" || run.mode === "arena" ? `Act ${run.act} · ${L("ห้อง", "Room")} ${run.floor}/${ROOMS_PER_ACT * ACTS}` : `${run.mode === "map" ? mapZone().ic + " " : ""}Act ${run.act} · ${L("ชั้น", "Floor")} ${run.floor}` + (run.relics && run.relics.length ? ` <span class="rlist">${relicIcons()}</span>` : "");
   return `<span>${md.ic} <b>${where}</b></span><span>❤️ <b>${run.hp}/${run.maxHp}</b></span><span>💰 <b>${run.gold}</b></span>` +
-    `<button class="ghost pot${run.potions ? "" : " no"}" data-a="potion" title="Potion">🧪 ${run.potions}</button><span class="sp"></span>` +
+    potSlotsHtml() + `<span class="sp"></span>` +
     `<button class="ghost" data-a="deck">🃏 ${run.deck.length}</button><button class="ghost" data-a="pause">⏸</button>`;
+}
+function potSlotsHtml() {
+  const ps = potsOf(run), cap = run.mode === "pvp" ? ps.length : potCap();
+  if (potSel != null && !ps[potSel]) potSel = null;
+  const slots = ps.map((id, i) => `<button class="ghost potb${potSel === i ? " on" : ""}${potWhy(id) ? " dim" : ""}" data-a="potion|${i}" title="${esc(tr(potDef(id).t) + " · " + tr(potDef(id).d))}">${potDef(id).ic}</button>`).join("") +
+    `<span class="pot0"></span>`.repeat(Math.max(0, cap - ps.length));
+  let pop = "";
+  if (potSel != null) {
+    const id = ps[potSel], p = potDef(id), why = potWhy(id);
+    pop = `<div class="potpop"><div class="pph">${p.ic} <b>${esc(tr(p.t))}</b>${p.rare ? " ✨" : ""}</div><div class="ppd">${esc(tr(p.d))}</div>` +
+      (why ? `<div class="ppw">${why}</div>` : "") +
+      `<div class="row" style="gap:6px;justify-content:center;margin-top:6px">${p.auto ? "" : `<button data-a="potuse|${potSel}"${why ? " disabled" : ""}>${L("ใช้", "Use")} <kbd>Q</kbd></button>`}` +
+      `<button class="ghost" data-a="potdrop|${potSel}">🗑️ ${L("ทิ้ง", "Drop")}</button><button class="ghost" data-a="potx">✕</button></div></div>`;
+  }
+  return `<span class="pots">🧪${slots}${pop}</span>`;
+}
+function potShopHtml(pr) {
+  const ld = potLoadOf(pr), inLd = id => ld.filter(x => x === id).length;
+  const bar = `<div class="potload"><b>🎒 ${L("พกเข้า run", "Taken into a run")}</b> <small>${L("แตะยาในช่องเพื่อเอาออก · กด ＋ ที่ยาเพื่อใส่", "tap a slot to take it out · press ＋ on a potion to add it")}</small><div class="potslots">` +
+    Array.from({ length: POT_LOAD }, (_, i) => ld[i] ? `<button class="ghost potslot" data-potrm="${i}" title="${esc(tr(potDef(ld[i]).t))}">${potDef(ld[i]).ic}</button>` : `<span class="potslot empty"></span>`).join("") + `</div></div>`;
+  const card = p => {
+    const own = pr.inv[p.id] || 0, can = own > inLd(p.id) && ld.length < POT_LOAD;
+    return `<div class="item${p.rare || pr.gold >= p.price ? "" : " no"}"${p.rare ? "" : ` data-buy="${p.id}"`}><span class="ic">${p.ic}</span><div class="info"><b>${esc(tr(p.t))}</b>${p.rare ? " ✨" : ""} <small>${t("owned", own)}</small><div class="d">${esc(tr(p.d))}</div></div>` +
+      `<span class="price">${p.rare ? L("หาได้ในรันเท่านั้น", "found in runs") : "💰 " + p.price}</span>` +
+      `<button class="ghost potadd" data-potadd="${p.id}"${can ? "" : " disabled"} title="${L("ใส่ช่องพก", "Add to the run slots")}">＋</button></div>`;
+  };
+  return bar + `<div class="shop">` + POTIONS.filter(p => !p.rare || pr.inv[p.id]).map(card).join("") + `</div>` +
+    `<div class="sub" style="margin-top:8px">✨ ${L("ยาหายาก (ฟีนิกซ์ / โชคดี / ทรายเวลา) หาได้จาก Elite บอส และร้านค้าในรัน · ยาที่ไม่ได้ใช้กลับเข้าคลังตอนจบรัน", "Rare potions (Phoenix / Lucky / Time) come from elites, bosses and shops in a run · unused potions come back when a run ends")}</div>`;
 }
 function renderRun() {
   if (!run) return goHome();
@@ -2589,7 +2680,7 @@ function renderOv() {
     h = `<div style="font-size:44px">🛒</div><div class="big">${tr(NODE.shop.t)}</div><div class="sub">💰 <b style="color:var(--gold)">${run.gold}</b></div>` +
       `<div class="cardrow">${o.stock.map((s, i) => s.sold ? `<div class="hc sold"><div class="ci">✔</div></div>` : cardHtml({ id: s.id, up: 0 }, { cls: run.gold >= s.price ? "" : "no", attrs: ` data-a="buy|${i}"`, price: s.price, key: ++kn })).join("")}</div>` +
       `<div class="row" style="justify-content:center">` +
-      `<button class="ghost" data-a="buypot"${o.potion.sold || run.gold < o.potion.price || run.potions >= potCap() ? " disabled" : ""}><kbd>${++kn}</kbd>🧪 Potion · 💰 ${o.potion.price}</button>` +
+      shopPots(o).map((p, i) => `<button class="ghost" data-a="buypot|${i}" title="${esc(tr(potDef(p.id).d))}"${p.sold || run.gold < p.price || potsOf(run).length >= potCap() ? " disabled" : ""}><kbd>${++kn}</kbd>${potName(p.id)}${potDef(p.id).rare ? " ✨" : ""} · 💰 ${p.price}</button>`).join("") +
       `<button class="ghost" data-a="buyrm"${o.rmDone || run.gold < run.rmCost || run.deck.length <= 5 ? " disabled" : ""}><kbd>${++kn}</kbd>✂️ ${L("ลบการ์ด", "Remove a card")} · 💰 ${run.rmCost}</button>` +
       `<button data-a="next"><kbd>${++kn}</kbd>${L("ออกจากร้าน ▶", "Leave ▶")}</button></div>`;
   } else if (o.k === "event") {
@@ -2721,7 +2812,7 @@ function storyBack() {
 function storyClear() {
   const pr = prof(), ch = run.ch;
   storyGain = run.gold;
-  pr.gold += run.gold; pr.inv.potion = (pr.inv.potion || 0) + run.potions; pr.stats.kills = (pr.stats.kills || 0) + run.kills;
+  pr.gold += run.gold; bankPots(pr, run); pr.stats.kills = (pr.stats.kills || 0) + run.kills;
   storyLoot = ch >= pr.story.done ? STORY_REWARDS[ch].map(g => addItem(pr, g.id, g.r)) : []; // first clear only
   pr.story.done = Math.max(pr.story.done, ch + 1);
   pr.run = null; run = null;
@@ -2832,9 +2923,7 @@ function renderMShop() {
     html = `<div class="sub" style="margin:0 0 10px">${t("sellHint", Math.round(SELL_RATE * 100))}</div>` + note +
       `<div class="shop">` + (rows.map(b => sellRow(pr, b)).join("") || `<div class="sub">${t("sellNone")}</div>`) + `</div>`;
   } else if (tab === "items") {
-    html = `<div class="shop">` + MITEMS.map(it =>
-      `<div class="item${pr.gold >= it.price ? "" : " no"}" data-buy="${it.id}"><span class="ic">${it.ic}</span><div class="info"><b>${it.t}</b> <small>${t("owned", pr.inv[it.id] || 0)}</small><div class="d">${tr(it.d)}</div></div><span class="price">💰 ${it.price}</span></div>`
-    ).join("") + `</div>`;
+    html = potShopHtml(pr);
   } else if (tab === "weapons") {
     html = `<div class="sub buyhint" style="margin:0 0 10px">${t("buyCopiesHint", MERGE_COUNT)}</div>` +
       `<div class="secgrid">` + CLASS_IDS.filter(cls => cls !== "martial").map(cls => sec(`${THEMES[cls].ic} ${tr(THEMES[cls].n)} <small style="color:var(--dim)">· ${THEME_STAT[cls].toUpperCase()} · ${tr(THEMES[cls].d)}</small>`,
@@ -2864,9 +2953,16 @@ function mshopClick(e) {
   const pr = prof();
   const merchEl = e.target.closest("[data-merchant]"), buyEl = e.target.closest("[data-buy]"), gearEl = e.target.closest("[data-buy-gear]");
   if (merchEl) { mMerch = merchEl.dataset.merchant; mergeNote = ""; lastPassRoll = []; return renderMShop(); }
+  const padd = e.target.closest("[data-potadd]"), prm = e.target.closest("[data-potrm]");
+  if (padd || prm) {
+    const ld = pr.potLoad = potLoadOf(pr);
+    if (prm) ld.splice(+prm.dataset.potrm, 1);
+    else { const id = padd.dataset.potadd; if (ld.length < POT_LOAD && (pr.inv[id] || 0) > ld.filter(x => x === id).length) ld.push(id); }
+    saveStore(); return renderMShop();
+  }
   if (buyEl) {
     const it = MITEMS.find(x => x.id === buyEl.dataset.buy);
-    if (pr.gold < it.price) return;
+    if (!it || pr.gold < it.price) return;
     pr.gold -= it.price; pr.inv[it.id] = (pr.inv[it.id] || 0) + 1;
   } else if (gearEl) {
     const g = defOf(gearEl.dataset.buyGear);
@@ -3019,7 +3115,7 @@ function renderAllItems(pr, part = "gear") {
   }
   const ownPass = PASSIVES.filter(ps => passLvOf(pr, ps.id) > 0);
   if (part === "pass") return ownPass.map(ps => passRow(pr, ps, false)).join("") || `<div class="sub">${t("invNoneForSlot")}</div>`;
-  html += group("items", "", t("invItems"), MITEMS.map(it => `<div class="item"><span class="ic">${it.ic}</span><div class="info"><b>${it.t}</b><div class="d">${tr(it.d)}</div></div><span class="price">x${pr.inv[it.id] || 0}</span></div>`).join(""), true);
+  html += group("items", "", t("invItems"), POTIONS.filter(p => !p.rare || pr.inv[p.id]).map(p => `<div class="item"><span class="ic">${p.ic}</span><div class="info"><b>${esc(tr(p.t))}</b><div class="d">${esc(tr(p.d))}</div></div><span class="price">x${pr.inv[p.id] || 0}</span></div>`).join(""), true);
   return html;
 }
 let invTab = "gear";
@@ -3057,7 +3153,7 @@ function renderInv() {
     `<button class="ghost" data-statreset="1" style="margin-top:8px;font-size:13px;padding:4px 10px"${spent ? "" : " disabled"}>↺ ${L("คืนแต้ม stat ทั้งหมด", "Refund all stat points")} · 💰 ${statResetCost(pr)}</button>`);
   const statsBox = sec(t("invStats"), `<div class="statgrid">${stat("❤️ HP", s.hp)}${stat("⚔️ " + L("ดาเมจ", "Damage"), "+" + pc(s.atk) + "%")}${stat("🛡️ Block", "+" + pc(s.def) + "%")}` +
       `${stat("🎯 Crit", pc(s.crit) + "%")}${stat("💥 Crit DMG", "x" + s.critMult)}${stat("🌬️ " + L("หลบ", "Dodge"), pc(s.dodge) + "%")}` +
-      `${stat("⚡ " + L("โอกาส +1⚡", "+1⚡ chance"), pc(s.enChance) + "%")}${stat("🧪 " + t("invPotions"), Math.min(3, pr.inv.potion || 0))}${stat("🥋 " + L("สถานะ", "Stance"), s.unarmed ? L("มือเปล่า", "Unarmed") : L("ถืออาวุธ", "Armed"))}</div>` +
+      `${stat("⚡ " + L("โอกาส +1⚡", "+1⚡ chance"), pc(s.enChance) + "%")}${stat("🧪 " + t("invPotions"), potLoadOf(pr).map(id => potDef(id).ic).join("") || "—")}${stat("🥋 " + L("สถานะ", "Stance"), s.unarmed ? L("มือเปล่า", "Unarmed") : L("ถืออาวุธ", "Armed"))}</div>` +
       (perks.length ? `<div class="sub" style="margin:0">✨ ${t("invPerks")}: ${perks.join(" · ")}</div>` : ""));
   const deckBox = sec(L("🃏 เด็คเริ่มต้น: Strike ×5 · Defend ×4 · การ์ดจากของในมือ", "🃏 Starting deck: Strike ×5 · Defend ×4 · cards from what you hold"), `<div class="cardrow mini" style="margin:6px 0">${startDeck.map(c => cardHtml(c, { st: s })).join("")}</div>`);
   const classBox = sec(L("🔗 คลาสจากของในมือ", "🔗 Classes from what you hold"), `<div class="sub" style="margin:0 0 6px">${L("ถืออาวุธ/มือรองคลาสไหน จะเจอการ์ดคลาสนั้นบ่อยขึ้นและปลดล็อกการ์ดพิเศษ · ไม่ถืออาวุธ = มือเปล่า", "Held weapons/off-hands make their class's cards show up more and unlock its special cards · no weapon = Martial")}</div>` +
@@ -3147,6 +3243,7 @@ const ACTIONS = {
   pvexit: () => pvpExit(),
   pvm: id => pvpCfg({ mode: id }),
   pvh: h => pvpCfg({ hp: +h }),
+  pvpot: v => pvpCfg({ pot: v === "1" }),
   pvdeck: () => openArena(true),
   pvready: () => pvpReady(),
   pvagain: () => pvpAgain(),
@@ -3177,7 +3274,10 @@ const ACTIONS = {
   dsel: i => discardToggle(+i),
   dok: () => discardOk(),
   dx: () => discardCancel(),
-  potion: () => usePotion(),
+  potion: i => potOpen(+i || 0),
+  potuse: i => usePot(+i),
+  potdrop: i => potDrop(+i),
+  potx: () => { potSel = null; rerunHead(); },
   deck: () => openPause("deck"),
   pause: () => openPause("menu"),
   unpause: () => { closePause(); renderRun(); },
@@ -3207,7 +3307,7 @@ const ACTIONS = {
   },
   pickx: () => { run.ov = run.ov.back; saveStore(); renderOv(); },
   buy: i => { const o = run.ov, s = o.stock[+i]; if (!s || s.sold || run.gold < s.price) return; run.gold -= s.price; s.sold = true; run.deck.push({ id: s.id, up: 0, u: newUid() }); saveStore(); renderRun(); },
-  buypot: () => { const o = run.ov; if (o.potion.sold || run.gold < o.potion.price || run.potions >= potCap()) return; run.gold -= o.potion.price; o.potion.sold = true; run.potions++; saveStore(); renderRun(); },
+  buypot: i => { const o = run.ov, p = shopPots(o)[+i || 0]; if (!p || p.sold || run.gold < p.price || potsOf(run).length >= potCap()) return; run.gold -= p.price; p.sold = true; run.pots.push(p.id); saveStore(); renderRun(); },
   buyrm: () => { const o = run.ov; if (o.rmDone || run.gold < run.rmCost) return; run.gold -= run.rmCost; run.rmCost += 25; run.ov = { k: "pick", mode: "rm", back: o }; saveStore(); renderOv(); },
   evc: i => {
     const o = run.ov, ev = EVENTS.find(e => e.id === o.id), ch = [...ev.ch, LEAVE][+i];
