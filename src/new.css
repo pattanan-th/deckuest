@@ -616,3 +616,38 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
   .energy { width: 32px; height: 32px; font-size: 16px; }
 }
 @media (max-width: 560px) and (max-height: 780px) { .foe .fe { font-size: 44px; } .foe.boss .fe { font-size: 58px; } .sts { min-height: 0; } }
+/* fight log: the last few actions, faint, at the left side of the enemy area (a 2-line strip on narrow screens) */
+#play > #arena { position: relative; }
+#clog { pointer-events: none; font-size: 12px; line-height: 1.35; color: var(--dim); display: flex; flex-direction: column; gap: 3px; }
+#clog .lg { background: #0000002e; border-left: 2px solid var(--line); border-radius: 6px; padding: 3px 8px; overflow-wrap: anywhere; }
+#clog .lg b { color: var(--text); font-weight: 700; }
+#clog .lg.p { border-left-color: #7dd3fc; }
+#clog .lg.f { border-left-color: var(--bad); }
+#clog .lg.s { border-left-color: #f59e0b; }
+#clog .lg.t { background: none; border: 0; padding: 2px 8px 0; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; opacity: .55; }
+#clog .lbad { color: #ff9b9b; }
+#clog .lgood { color: #8ef0a6; }
+#clog .lg.new { animation: lgin .35s ease-out; }
+@keyframes lgin { from { transform: translateX(-10px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { #clog .lg.new { animation: none; } }
+@media (min-width: 900px), (min-width: 561px) and (max-height: 500px) {
+  #clog { position: absolute; left: 10px; top: 8px; bottom: 8px; width: min(270px, 21%); justify-content: flex-end; overflow: hidden; z-index: 1;
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 35%); mask-image: linear-gradient(to bottom, transparent, #000 35%); }
+  #foes { padding-inline: min(280px, 22%); }
+}
+@media (max-width: 560px), (max-width: 899px) and (min-height: 501px) {
+  #play > #arena { flex-direction: column; align-items: stretch; }
+  #clog { flex: none; width: 100%; font-size: 11px; gap: 2px; margin-bottom: 4px; }
+  #clog .lg { padding: 1px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #foes { margin-block: auto; }
+}
+@media (min-width: 561px) and (max-height: 500px) {
+  #clog { font-size: 10px; top: 4px; bottom: 4px; left: 6px; gap: 2px; }
+  #clog .lg { padding: 1px 6px; }
+}
+#clog .lg b.ldmg { color: #ffd479; }
+@media (max-width: 560px) and (max-height: 700px) {
+  #clog .lg:not(:last-child) { display: none; }
+  #clog { margin-bottom: 0; line-height: 1.25; }
+  #clog .lg { padding: 0 6px; }
+}
